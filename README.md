@@ -8,6 +8,7 @@ Sistema de agendamento e gestão para barbearia. Next.js 16 + TypeScript + Supab
 - `/admin/login` — login administrativo
 - `/admin` — painel administrativo
 - `/api/admin/users` — rota de servidor protegida para listar e criar administradores
+- `/api/admin/bootstrap` — ativa o primeiro administrador a partir de um usuário já cadastrado (bloqueada após existir um admin)
 
 ## Página do cliente
 
@@ -32,7 +33,7 @@ O banco impede dois agendamentos sobrepostos para o mesmo barbeiro (restrição 
 - Estoque: produtos, entrada/saída com validação de saldo.
 - **Administradores**: criar novos acessos direto pelo painel (rota de servidor com a Secret key).
 - **Planos**: cadastrar e editar os planos mensais exibidos no site.
-- Configurações: nome, frase, WhatsApp, Instagram, endereço e URL da logo (a logo oficial já vem em `public/logo.jpg` como padrão).
+- Configurações: nome, frase, WhatsApp, Instagram, endereço e URL da logo (a logo oficial já vem em `public/logo.png` (fundo transparente) como padrão).
 
 ## Planos mensais
 
@@ -48,18 +49,11 @@ O banco impede dois agendamentos sobrepostos para o mesmo barbeiro (restrição 
 
 ## 2. Criar o primeiro administrador
 
-1. **Authentication > Users > Add user** — cadastre e-mail e senha forte.
-2. No SQL Editor, execute trocando o e-mail:
+1. No Supabase: **Authentication > Users > Add user > Create new user** — cadastre e-mail e senha forte (marque a confirmação automática do e-mail).
+2. No site, abra `/admin/login` e clique em **"Primeiro acesso? Ativar administrador"**.
+3. Informe o e-mail e a senha desse usuário. Ele vira administrador e já entra no painel.
 
-```sql
-update public.profiles
-set role = 'admin', full_name = 'Administrador Parrudo'
-where id = (
-  select id from auth.users where email = 'SEU-EMAIL@EXEMPLO.COM'
-);
-```
-
-Os próximos administradores podem ser criados direto no painel, na aba **Administradores**.
+Esse fluxo só funciona enquanto não existir nenhum administrador. Os próximos são criados dentro do painel, na aba **Administradores**. (Alternativa via SQL: `update public.profiles set role = 'admin' where id = (select id from auth.users where email = 'SEU-EMAIL');`)
 
 ## 3. Variáveis de ambiente
 

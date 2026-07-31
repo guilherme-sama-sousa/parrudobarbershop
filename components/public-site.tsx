@@ -96,7 +96,7 @@ export function PublicSite() {
         <Logo logoUrl={settings.logo_url} compact />
         <div className="single-header-actions">
           {plans.length > 0 && (
-            <button type="button" className="button button-outline button-small" onClick={() => setShowPlans(true)}>
+            <button type="button" className="button button-plans button-small" onClick={() => setShowPlans(true)}>
               Planos mensais
             </button>
           )}

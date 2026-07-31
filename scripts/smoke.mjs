@@ -10,6 +10,7 @@ const required = [
   'components/booking-flow.tsx',
   'components/admin-dashboard.tsx',
   'app/api/admin/users/route.ts',
+  'app/api/admin/bootstrap/route.ts',
   'supabase/migrations/001_init.sql',
   '.env.example',
 ]
