@@ -31,12 +31,20 @@ O banco impede dois agendamentos sobrepostos para o mesmo barbeiro (restrição 
 - **Horários**: configurar dias, abertura, fechamento e intervalo dos slots pelo próprio painel.
 - Estoque: produtos, entrada/saída com validação de saldo.
 - **Administradores**: criar novos acessos direto pelo painel (rota de servidor com a Secret key).
-- Configurações: nome, frase, WhatsApp, Instagram, endereço e URL da logo.
+- **Planos**: cadastrar e editar os planos mensais exibidos no site.
+- Configurações: nome, frase, WhatsApp, Instagram, endereço e URL da logo (a logo oficial já vem em `public/logo.jpg` como padrão).
+
+## Planos mensais
+
+- Tabela `plans` com os planos Bronze, Prata, Ouro, Premium e Diamante (migração 002).
+- Aparecem na página do cliente em um modal ("Planos mensais"), com contratação pelo WhatsApp.
+- Editáveis no painel, aba **Planos**.
 
 ## 1. Preparar o banco no Supabase
 
 1. Crie um projeto em `https://database.new`.
 2. Abra **SQL Editor** e execute todo o conteúdo de `supabase/migrations/001_init.sql` (uma única vez).
+3. Execute `supabase/migrations/002_precos_e_planos.sql` — aplica a tabela de preços oficial nos serviços e cria os planos mensais. Em banco já existente desta implantação, execute SOMENTE o 002.
 
 ## 2. Criar o primeiro administrador
 

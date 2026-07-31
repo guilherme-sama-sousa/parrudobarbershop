@@ -52,6 +52,15 @@ export interface BlockedTime {
   barbers: { name: string } | null
 }
 
+export interface Plan {
+  id: string
+  name: string
+  description: string | null
+  price: number
+  sort_order: number
+  active: boolean
+}
+
 export interface BusinessHour {
   day_of_week: number
   open_time: string

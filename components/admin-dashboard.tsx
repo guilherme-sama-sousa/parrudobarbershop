@@ -5,15 +5,16 @@ import { useRouter } from 'next/navigation'
 import { Logo } from '@/components/logo'
 import { bahiaDateTimeFormatter, currencyFormatter, toLocalDateInput } from '@/lib/format'
 import { getSupabaseBrowserClient, isSupabaseConfigured } from '@/lib/supabase/client'
-import type { AdminUser, Appointment, AppointmentStatus, Barber, BlockedTime, BusinessHour, Service, SiteSettings, StockBalance } from '@/lib/types'
+import type { AdminUser, Appointment, AppointmentStatus, Barber, BlockedTime, BusinessHour, Plan, Service, SiteSettings, StockBalance } from '@/lib/types'
 
-type Tab = 'dashboard' | 'agenda' | 'barbers' | 'services' | 'blocks' | 'hours' | 'stock' | 'admins' | 'settings'
+type Tab = 'dashboard' | 'agenda' | 'barbers' | 'services' | 'plans' | 'blocks' | 'hours' | 'stock' | 'admins' | 'settings'
 
 const tabLabels: Record<Tab, string> = {
   dashboard: 'Dashboard',
   agenda: 'Agenda',
   barbers: 'Barbeiros',
   services: 'Serviços',
+  plans: 'Planos',
   blocks: 'Bloqueios',
   hours: 'Horários',
   stock: 'Estoque',
@@ -56,6 +57,7 @@ export function AdminDashboard() {
   const [blocks, setBlocks] = useState<BlockedTime[]>([])
   const [stock, setStock] = useState<StockBalance[]>([])
   const [hours, setHours] = useState<BusinessHour[]>([])
+  const [plans, setPlans] = useState<Plan[]>([])
   const [agendaDate, setAgendaDate] = useState(toLocalDateInput())
 
   const flash = (message: string) => {
@@ -80,7 +82,7 @@ export function AdminDashboard() {
       }
 
       const userId = sessionData.session.user.id
-      const [profileResult, settingsResult, servicesResult, barbersResult, appointmentsResult, blocksResult, stockResult, hoursResult] = await Promise.all([
+      const [profileResult, settingsResult, servicesResult, barbersResult, appointmentsResult, blocksResult, stockResult, hoursResult, plansResult] = await Promise.all([
         supabase.from('profiles').select('full_name, role').eq('id', userId).single(),
         supabase.from('site_settings').select('*').eq('id', 1).single(),
         supabase.from('services').select('*').order('name'),
@@ -89,6 +91,7 @@ export function AdminDashboard() {
         supabase.from('blocked_times').select('id, starts_at, ends_at, reason, barbers(name)').order('starts_at', { ascending: false }).limit(200),
         supabase.from('stock_balances').select('*').order('name'),
         supabase.from('business_hours').select('*').order('day_of_week'),
+        supabase.from('plans').select('*').order('sort_order'),
       ])
 
       if (profileResult.error) throw new Error('Usuário sem perfil administrativo. Verifique a etapa de criação do primeiro admin no README.')
@@ -107,6 +110,8 @@ export function AdminDashboard() {
       setBlocks((blocksResult.data ?? []) as unknown as BlockedTime[])
       setStock((stockResult.data ?? []) as StockBalance[])
       setHours((hoursResult.data ?? []) as BusinessHour[])
+      // Planos são opcionais até a migração 002 rodar.
+      setPlans(plansResult.error ? [] : ((plansResult.data ?? []) as Plan[]))
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Falha ao carregar o painel.')
     } finally {
@@ -164,6 +169,7 @@ export function AdminDashboard() {
         {!error && tab === 'agenda' && <AgendaView appointments={todayAppointments} date={agendaDate} setDate={setAgendaDate} onStatus={async (id, status) => { const supabase = getSupabaseBrowserClient(); const { error: updateError } = await supabase.from('appointments').update({ status }).eq('id', id); if (updateError) return setError(updateError.message); flash('Status atualizado.'); await loadAll() }} />}
         {!error && tab === 'barbers' && <BarbersView barbers={barbers} onSaved={async () => { flash('Barbeiro salvo.'); await loadAll() }} setError={setError} />}
         {!error && tab === 'services' && <ServicesView services={services} onSaved={async () => { flash('Serviço salvo.'); await loadAll() }} setError={setError} />}
+        {!error && tab === 'plans' && <PlansView plans={plans} onSaved={async () => { flash('Plano salvo.'); await loadAll() }} setError={setError} />}
         {!error && tab === 'blocks' && <BlocksView blocks={blocks} barbers={barbers} onSaved={async () => { flash('Bloqueio atualizado.'); await loadAll() }} setError={setError} />}
         {!error && tab === 'stock' && <StockView stock={stock} onSaved={async () => { flash('Estoque atualizado.'); await loadAll() }} setError={setError} />}
         {!error && tab === 'hours' && <HoursView hours={hours} onSaved={async () => { flash('Horários atualizados.'); await loadAll() }} setError={setError} />}
@@ -274,7 +280,7 @@ function SettingsView({ settings, setSettings, onSaved, setError }: { settings: 
 
 function AppointmentRow({ item }: { item: Appointment }) { return <div className="appointment-row"><span className="appointment-time">{new Date(item.starts_at).toLocaleTimeString('pt-BR', { timeZone: 'America/Bahia', hour: '2-digit', minute: '2-digit' })}</span><div><strong>{item.clients?.full_name}</strong><small>{item.services?.name} • {item.barbers?.name}</small></div><span className={`status-badge status-${item.status}`}>{statusLabel[item.status]}</span></div> }
 function EmptyState({ text }: { text: string }) { return <div className="empty-state">{text}</div> }
-function tabIcon(tab: Tab) { return ({ dashboard: '▦', agenda: '◷', barbers: '♟', services: '✂', blocks: '⊘', hours: '◔', stock: '▣', admins: '♔', settings: '⚙' } as Record<Tab, string>)[tab] }
+function tabIcon(tab: Tab) { return ({ dashboard: '▦', agenda: '◷', barbers: '♟', services: '✂', plans: '❖', blocks: '⊘', hours: '◔', stock: '▣', admins: '♔', settings: '⚙' } as Record<Tab, string>)[tab] }
 
 function HoursView({ hours, onSaved, setError }: { hours: BusinessHour[]; onSaved: () => Promise<void>; setError: (value: string) => void }) {
   const [draft, setDraft] = useState<BusinessHour[]>(hours)
@@ -379,4 +385,28 @@ function AdminsView({ setError, onSaved }: { setError: (value: string) => void; 
   }
 
   return <div className="admin-stack"><form className="admin-panel admin-form" onSubmit={submit}><div className="panel-heading"><div><span className="eyebrow">NOVO ACESSO</span><h2>Cadastrar administrador</h2></div></div><div className="form-grid"><label>Nome<input value={fullName} onChange={(event) => setFullName(event.target.value)} required minLength={3} /></label><label>E-mail<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label><label className="span-2">Senha (mín. 8 caracteres)<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} autoComplete="new-password" /></label></div><button className="button button-gold" type="submit" disabled={saving}>{saving ? 'Criando...' : 'Criar administrador'}</button></form><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">EQUIPE DE ACESSO</span><h2>Usuários com perfil</h2></div></div>{loadingUsers ? <div className="loading-card">Carregando usuários...</div> : <div className="block-list">{users.map((user) => <div key={user.id}><div><strong>{user.full_name}</strong><span>{user.role === 'admin' ? 'Administrador' : 'Equipe'}</span><small>Desde {bahiaDateTimeFormatter.format(new Date(user.created_at))}</small></div></div>)}{!users.length && <EmptyState text="Nenhum usuário encontrado." />}</div>}</section></div>
+}
+
+function PlansView({ plans, onSaved, setError }: { plans: Plan[]; onSaved: () => Promise<void>; setError: (value: string) => void }) {
+  const [editingId, setEditingId] = useState('')
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [price, setPrice] = useState('')
+  const [sortOrder, setSortOrder] = useState('1')
+
+  const reset = () => { setEditingId(''); setName(''); setDescription(''); setPrice(''); setSortOrder('1') }
+  const edit = (plan: Plan) => { setEditingId(plan.id); setName(plan.name); setDescription(plan.description || ''); setPrice(String(plan.price)); setSortOrder(String(plan.sort_order)); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    const supabase = getSupabaseBrowserClient()
+    const payload = { name, description: description || null, price: Number(price), sort_order: Number(sortOrder) }
+    const query = editingId ? supabase.from('plans').update(payload).eq('id', editingId) : supabase.from('plans').insert(payload)
+    const { error } = await query
+    if (error) return setError(error.message.includes('relation') ? 'Execute a migração 002_precos_e_planos.sql no Supabase para habilitar os planos.' : error.message)
+    reset()
+    await onSaved()
+  }
+  const toggle = async (plan: Plan) => { const supabase = getSupabaseBrowserClient(); const { error } = await supabase.from('plans').update({ active: !plan.active }).eq('id', plan.id); if (error) return setError(error.message); await onSaved() }
+
+  return <div className="admin-stack"><form className="admin-panel admin-form" onSubmit={submit}><div className="panel-heading"><div><span className="eyebrow">{editingId ? 'EDITAR PLANO' : 'NOVO PLANO'}</span><h2>{editingId ? 'Atualizar plano mensal' : 'Cadastrar plano mensal'}</h2></div>{editingId && <button type="button" className="text-button" onClick={reset}>Cancelar edição</button>}</div><div className="form-grid"><label>Nome<input value={name} onChange={(event) => setName(event.target.value)} required /></label><label>Preço mensal (R$)<input type="number" min="0" step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} required /></label><label>Ordem<input type="number" min="1" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} required /></label><label className="span-2">O que inclui<input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Corte + Barba + Sobrancelha" /></label></div><button className="button button-gold" type="submit">{editingId ? 'Salvar alterações' : 'Cadastrar plano'}</button></form><div className="admin-card-grid">{plans.map((plan) => <article className="manage-card service-manage-card" key={plan.id}><div><h3>{plan.name}</h3><p>{plan.description || 'Sem descrição'}</p><small>Ordem {plan.sort_order}</small></div><strong>{currencyFormatter.format(Number(plan.price))}/mês</strong><div className="manage-actions"><button className="edit-button" onClick={() => edit(plan)}>Editar</button><button className={plan.active ? 'toggle active' : 'toggle'} onClick={() => void toggle(plan)}>{plan.active ? 'Ativo' : 'Inativo'}</button></div></article>)}{!plans.length && <EmptyState text="Nenhum plano cadastrado. Execute a migração 002 ou cadastre acima." />}</div></div>
 }
