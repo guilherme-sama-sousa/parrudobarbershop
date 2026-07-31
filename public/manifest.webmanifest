@@ -1,0 +1,9 @@
+{
+  "name": "Parrudo Barbershop",
+  "short_name": "Parrudo",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "description": "Agendamento online da Parrudo Barbershop"
+}
