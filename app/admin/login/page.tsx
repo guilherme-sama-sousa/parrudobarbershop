@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Logo } from '@/components/logo'
+import { getErrorMessage } from '@/lib/error-message'
 import { getSupabaseBrowserClient, getSupabaseConfigStatus } from '@/lib/supabase/client'
 
 export default function AdminLoginPage() {
@@ -37,7 +38,7 @@ export default function AdminLoginPage() {
       if (authError) throw authError
       router.replace('/admin')
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Não foi possível entrar.')
+      setError(getErrorMessage(caught, 'Não foi possível entrar.'))
     } finally {
       setLoading(false)
     }

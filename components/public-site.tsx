@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { BookingFlow } from '@/components/booking-flow'
 import { Logo } from '@/components/logo'
 import { currencyFormatter } from '@/lib/format'
+import { getErrorMessage } from '@/lib/error-message'
 import { getSupabaseBrowserClient, getSupabaseConfigStatus } from '@/lib/supabase/client'
 import type { Barber, Plan, Service, SiteSettings } from '@/lib/types'
 
@@ -74,7 +75,7 @@ export function PublicSite() {
         // Planos são opcionais: se a migração 002 ainda não rodou, o site segue sem eles.
         setPlans(plansResult.error ? [] : ((plansResult.data ?? []) as Plan[]))
       } catch (error) {
-        setLoadError(error instanceof Error ? error.message : 'Não foi possível carregar os dados.')
+        setLoadError(getErrorMessage(error, 'Não foi possível carregar os dados.'))
       } finally {
         setLoading(false)
       }

@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Logo } from '@/components/logo'
 import { bahiaDateTimeFormatter, currencyFormatter, toLocalDateInput } from '@/lib/format'
+import { getErrorMessage } from '@/lib/error-message'
 import { getSupabaseBrowserClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import type { AdminUser, Appointment, AppointmentStatus, Barber, BlockedTime, BusinessHour, Plan, Service, SiteSettings, StockBalance } from '@/lib/types'
 
@@ -113,7 +114,7 @@ export function AdminDashboard() {
       // Planos são opcionais até a migração 002 rodar.
       setPlans(plansResult.error ? [] : ((plansResult.data ?? []) as Plan[]))
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Falha ao carregar o painel.')
+      setError(getErrorMessage(caught, 'Falha ao carregar o painel.'))
     } finally {
       setLoading(false)
     }
@@ -348,7 +349,7 @@ function AdminsView({ setError, onSaved }: { setError: (value: string) => void; 
       if (!response.ok) throw new Error(body.error || 'Não foi possível listar os administradores.')
       setUsers((body.users ?? []) as AdminUser[])
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Falha ao listar administradores.')
+      setError(getErrorMessage(caught, 'Falha ao listar administradores.'))
     } finally {
       setLoadingUsers(false)
     }
@@ -378,7 +379,7 @@ function AdminsView({ setError, onSaved }: { setError: (value: string) => void; 
       onSaved()
       await loadUsers()
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Falha ao criar administrador.')
+      setError(getErrorMessage(caught, 'Falha ao criar administrador.'))
     } finally {
       setSaving(false)
     }

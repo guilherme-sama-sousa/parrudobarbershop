@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { groupAvailableSlots, isValidBookingInput } from '@/lib/booking-utils.mjs'
+import { getErrorMessage } from '@/lib/error-message'
 import { bahiaTimeFormatter, currencyFormatter, maskPhone, normalizePhone, toLocalDateInput } from '@/lib/format'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import type { AvailableSlot, Barber, Service } from '@/lib/types'
@@ -73,7 +74,7 @@ export function BookingFlow({ services, barbers, configured, businessName }: Boo
       setSlots((data ?? []) as AvailableSlot[])
     } catch (caught) {
       setSlots([])
-      setError(caught instanceof Error ? caught.message : 'Não foi possível consultar os horários.')
+      setError(getErrorMessage(caught, 'Não foi possível consultar os horários.'))
     } finally {
       setLoadingSlots(false)
     }
@@ -104,7 +105,7 @@ export function BookingFlow({ services, barbers, configured, businessName }: Boo
       if (rpcError) throw rpcError
       setSuccessId(String(data))
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Não foi possível concluir o agendamento.')
+      setError(getErrorMessage(caught, 'Não foi possível concluir o agendamento.'))
       await loadSlots()
       setStep(4)
     } finally {
