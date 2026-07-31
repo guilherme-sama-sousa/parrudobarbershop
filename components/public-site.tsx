@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { BookingFlow } from '@/components/booking-flow'
 import { Logo } from '@/components/logo'
 import { currencyFormatter } from '@/lib/format'
-import { getSupabaseBrowserClient, isSupabaseConfigured } from '@/lib/supabase/client'
+import { getSupabaseBrowserClient, getSupabaseConfigStatus } from '@/lib/supabase/client'
 import type { Barber, Plan, Service, SiteSettings } from '@/lib/types'
 
 const demoSettings: SiteSettings = {
@@ -43,7 +43,8 @@ const demoPlans: Plan[] = [
 ]
 
 export function PublicSite() {
-  const configured = isSupabaseConfigured()
+  const configStatus = getSupabaseConfigStatus()
+  const configured = configStatus === 'ok'
   const [settings, setSettings] = useState<SiteSettings>(demoSettings)
   const [services, setServices] = useState<Service[]>(demoServices)
   const [barbers, setBarbers] = useState<Barber[]>(demoBarbers)
@@ -106,10 +107,17 @@ export function PublicSite() {
         </div>
       </header>
 
-      {!configured && (
+      {configStatus === 'missing' && (
         <div className="demo-banner">
           <div className="page-container">
             <strong>Modo de demonstração:</strong> conecte o Supabase para liberar agendamentos reais.
+          </div>
+        </div>
+      )}
+      {configStatus === 'invalid_url' && (
+        <div className="demo-banner demo-banner-error">
+          <div className="page-container">
+            <strong>Configuração incorreta:</strong> a variável NEXT_PUBLIC_SUPABASE_URL na Vercel não contém uma URL válida. O valor deve ser apenas https://SEU-PROJETO.supabase.co (sem o nome da variável, sem aspas e sem espaços). Corrija e faça Redeploy.
           </div>
         </div>
       )}

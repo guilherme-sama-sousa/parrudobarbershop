@@ -320,8 +320,9 @@ th { color: #6d6d6d; font-size: .61rem; letter-spacing: .08em; text-transform: u
 .single-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 12px clamp(16px, 4vw, 40px); border-top: 1px solid rgba(255,255,255,.07); color: #7d7d7d; font-size: .74rem; }
 
 /* ===== Logo com imagem e modal de planos ===== */
-.brand-logo-image img { height: 56px; }
-.brand-logo-compact.brand-logo-image img { height: 46px; }
+.brand-logo-image img { height: 74px; width: auto; max-width: 300px; object-fit: contain; }
+.brand-logo-compact.brand-logo-image img { height: 62px; }
+@media (max-width: 480px) { .brand-logo-compact.brand-logo-image img { height: 52px; max-width: 200px; } }
 .single-header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .plans-overlay { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: rgba(0,0,0,.72); backdrop-filter: blur(6px); }
 .plans-modal { width: min(520px, 100%); max-height: calc(100dvh - 32px); overflow: auto; display: grid; gap: 16px; padding: 22px; border: 1px solid #2f2a1e; border-radius: 24px; background: linear-gradient(165deg, #161513, #0c0c0b); box-shadow: var(--shadow); }
@@ -335,3 +336,4 @@ th { color: #6d6d6d; font-size: .61rem; letter-spacing: .08em; text-transform: u
 .plan-row strong { color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 1.15rem; letter-spacing: .08em; }
 .plan-row span { color: #a3a3a3; font-size: .8rem; }
 .plan-row b { white-space: nowrap; font-size: 1rem; }
+.demo-banner-error { border-bottom-color: #6a2a2a; background: #200b0b; color: #f0a3a3; }

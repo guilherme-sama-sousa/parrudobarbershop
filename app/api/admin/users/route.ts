@@ -8,13 +8,18 @@ function getEnv() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const secretKey = process.env.SUPABASE_SECRET_KEY
   if (!url || !secretKey) return null
+  try {
+    new URL(url)
+  } catch {
+    return null
+  }
   return { url, secretKey }
 }
 
 async function requireAdmin(request: NextRequest) {
   const env = getEnv()
   if (!env) {
-    return { error: NextResponse.json({ error: 'SUPABASE_SECRET_KEY não configurada no servidor.' }, { status: 500 }) }
+    return { error: NextResponse.json({ error: 'Variáveis do Supabase ausentes ou inválidas no servidor (NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SECRET_KEY).' }, { status: 500 }) }
   }
 
   const authHeader = request.headers.get('authorization') || ''
