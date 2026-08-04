@@ -10,15 +10,15 @@ Sistema de agendamento e gestão para barbearia. Next.js 16 + TypeScript + Supab
 - `/api/admin/users` — rota de servidor protegida para listar e criar administradores
 - `/api/admin/bootstrap` — ativa o primeiro administrador a partir de um usuário já cadastrado (bloqueada após existir um admin)
 
-## Página do cliente
+## Área do cliente
 
-Fluxo em 5 passos dentro de um único cartão:
+O cliente cria um acesso simples com nome, sobrenome, WhatsApp, e-mail e senha. Depois do login, encontra uma experiência responsiva no estilo de aplicativo com:
 
-1. Nome, sobrenome e WhatsApp (sem criar conta).
-2. Serviço.
-3. Barbeiro ou "primeiro disponível".
-4. Data e horário realmente livre (consulta em tempo real).
-5. Revisão e confirmação imediata.
+- início com próximo horário e atalhos;
+- novo agendamento em 4 passos;
+- histórico e cancelamento de horários futuros;
+- planos mensais e contratação pelo WhatsApp;
+- edição de nome e telefone no perfil.
 
 O banco impede dois agendamentos sobrepostos para o mesmo barbeiro (restrição `appointments_no_overlap`).
 
@@ -30,7 +30,7 @@ O banco impede dois agendamentos sobrepostos para o mesmo barbeiro (restrição 
 - Serviços: cadastrar, editar, preço, duração, ativar/inativar.
 - Bloqueios de agenda por barbeiro.
 - **Horários**: configurar dias, abertura, fechamento e intervalo dos slots pelo próprio painel.
-- Estoque: produtos, entrada/saída com validação de saldo.
+- Estoque: produtos com foto, cadastro, edição, exclusão, ativação/inativação e entrada/saída com validação de saldo.
 - **Administradores**: criar novos acessos direto pelo painel (rota de servidor com a Secret key).
 - **Planos**: cadastrar e editar os planos mensais exibidos no site.
 - Configurações: nome, frase, WhatsApp, Instagram, endereço e URL da logo (a logo oficial já vem em `public/logo.png` (fundo transparente) como padrão).
@@ -46,6 +46,9 @@ O banco impede dois agendamentos sobrepostos para o mesmo barbeiro (restrição 
 1. Crie um projeto em `https://database.new`.
 2. Abra **SQL Editor** e execute todo o conteúdo de `supabase/migrations/001_init.sql` (uma única vez).
 3. Execute `supabase/migrations/002_precos_e_planos.sql` — aplica a tabela de preços oficial nos serviços e cria os planos mensais. Em banco já existente desta implantação, execute SOMENTE o 002.
+4. Execute `supabase/migrations/003_area_cliente_e_fotos_estoque.sql` — cria o login do cliente, histórico/cancelamento seguro, foto dos produtos e o bucket de imagens.
+
+Em um banco já publicado, execute apenas as migrações ainda não aplicadas, na ordem numérica.
 
 ## 2. Criar o primeiro administrador
 

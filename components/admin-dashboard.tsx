@@ -261,17 +261,102 @@ function BlocksView({ blocks, barbers, onSaved, setError }: { blocks: BlockedTim
 }
 
 function StockView({ stock, onSaved, setError }: { stock: StockBalance[]; onSaved: () => Promise<void>; setError: (value: string) => void }) {
+  const [editingId, setEditingId] = useState('')
   const [name, setName] = useState('')
   const [category, setCategory] = useState('Bebida')
   const [unit, setUnit] = useState('un')
   const [minimum, setMinimum] = useState('5')
+  const [photoUrl, setPhotoUrl] = useState('')
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState('')
+  const [savingProduct, setSavingProduct] = useState(false)
   const [productId, setProductId] = useState('')
   const [movementType, setMovementType] = useState<'entry' | 'exit'>('entry')
   const [quantity, setQuantity] = useState('1')
   const [reason, setReason] = useState('')
-  const createProduct = async (event: FormEvent) => { event.preventDefault(); const supabase = getSupabaseBrowserClient(); const { error } = await supabase.from('stock_products').insert({ name, category: category || null, unit, minimum_stock: Number(minimum) }); if (error) return setError(error.message); setName(''); await onSaved() }
+
+  const resetProduct = () => {
+    setEditingId('')
+    setName('')
+    setCategory('Bebida')
+    setUnit('un')
+    setMinimum('5')
+    setPhotoUrl('')
+    setPhotoFile(null)
+    setPhotoPreview('')
+  }
+
+  const editProduct = (product: StockBalance) => {
+    setEditingId(product.id)
+    setName(product.name)
+    setCategory(product.category || '')
+    setUnit(product.unit)
+    setMinimum(String(product.minimum_stock))
+    setPhotoUrl(product.photo_url || '')
+    setPhotoFile(null)
+    setPhotoPreview(product.photo_url || '')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const selectPhoto = (file?: File) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) return setError('Selecione um arquivo de imagem.')
+    if (file.size > 5 * 1024 * 1024) return setError('A foto deve ter no máximo 5 MB.')
+    setError('')
+    setPhotoFile(file)
+    setPhotoPreview(URL.createObjectURL(file))
+  }
+
+  const uploadPhoto = async () => {
+    if (!photoFile) return photoUrl || null
+    const supabase = getSupabaseBrowserClient()
+    const extension = photoFile.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
+    const path = `products/${crypto.randomUUID()}.${extension}`
+    const { error: uploadError } = await supabase.storage.from('product-images').upload(path, photoFile, { cacheControl: '3600' })
+    if (uploadError) throw uploadError
+    return supabase.storage.from('product-images').getPublicUrl(path).data.publicUrl
+  }
+
+  const saveProduct = async (event: FormEvent) => {
+    event.preventDefault()
+    setSavingProduct(true)
+    setError('')
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const uploadedPhotoUrl = await uploadPhoto()
+      const payload = { name: name.trim(), category: category.trim() || null, unit: unit.trim(), minimum_stock: Number(minimum), photo_url: uploadedPhotoUrl }
+      const query = editingId ? supabase.from('stock_products').update(payload).eq('id', editingId) : supabase.from('stock_products').insert(payload)
+      const { error: productError } = await query
+      if (productError) throw productError
+      resetProduct()
+      await onSaved()
+    } catch (caught) {
+      setError(getErrorMessage(caught, 'Não foi possível salvar o produto. Verifique se a migração 003 foi aplicada.'))
+    } finally {
+      setSavingProduct(false)
+    }
+  }
+
+  const removeProduct = async (product: StockBalance) => {
+    const confirmed = window.confirm(`Excluir "${product.name}"? O produto e todo o histórico de movimentações dele serão removidos.`)
+    if (!confirmed) return
+    const supabase = getSupabaseBrowserClient()
+    const { error: removeError } = await supabase.from('stock_products').delete().eq('id', product.id)
+    if (removeError) return setError(removeError.message)
+    if (editingId === product.id) resetProduct()
+    if (productId === product.id) setProductId('')
+    await onSaved()
+  }
+
+  const toggleProduct = async (product: StockBalance) => {
+    const supabase = getSupabaseBrowserClient()
+    const { error: toggleError } = await supabase.from('stock_products').update({ active: !product.active }).eq('id', product.id)
+    if (toggleError) return setError(toggleError.message)
+    await onSaved()
+  }
+
   const moveStock = async (event: FormEvent) => { event.preventDefault(); const supabase = getSupabaseBrowserClient(); const { error } = await supabase.from('stock_movements').insert({ product_id: productId, movement_type: movementType, quantity: Number(quantity), reason: reason || null }); if (error) return setError(error.message); setQuantity('1'); setReason(''); await onSaved() }
-  return <div className="admin-stack"><div className="admin-two-columns"><form className="admin-panel admin-form" onSubmit={createProduct}><div className="panel-heading"><div><span className="eyebrow">PRODUTO</span><h2>Cadastrar item</h2></div></div><label>Nome<input value={name} onChange={(event) => setName(event.target.value)} required /></label><div className="form-grid"><label>Categoria<input value={category} onChange={(event) => setCategory(event.target.value)} /></label><label>Unidade<input value={unit} onChange={(event) => setUnit(event.target.value)} required /></label><label>Estoque mínimo<input type="number" min="0" value={minimum} onChange={(event) => setMinimum(event.target.value)} required /></label></div><button className="button button-gold" type="submit">Cadastrar produto</button></form><form className="admin-panel admin-form" onSubmit={moveStock}><div className="panel-heading"><div><span className="eyebrow">MOVIMENTAÇÃO</span><h2>Entrada ou saída</h2></div></div><label>Produto<select value={productId} onChange={(event) => setProductId(event.target.value)} required><option value="">Selecione</option>{stock.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><div className="form-grid"><label>Tipo<select value={movementType} onChange={(event) => setMovementType(event.target.value as 'entry' | 'exit')}><option value="entry">Entrada</option><option value="exit">Saída</option></select></label><label>Quantidade<input type="number" min="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} required /></label></div><label>Motivo<input value={reason} onChange={(event) => setReason(event.target.value)} /></label><button className="button button-gold" type="submit">Registrar movimentação</button></form></div><div className="stock-grid">{stock.map((item) => <article key={item.id} className={item.current_stock <= item.minimum_stock ? 'stock-card low' : 'stock-card'}><span>{item.category || 'Produto'}</span><h3>{item.name}</h3><strong>{item.current_stock} <small>{item.unit}</small></strong><p>Mínimo: {item.minimum_stock}</p></article>)}</div></div>
+  return <div className="admin-stack"><div className="admin-two-columns"><form className="admin-panel admin-form" onSubmit={saveProduct}><div className="panel-heading"><div><span className="eyebrow">{editingId ? 'EDITAR PRODUTO' : 'PRODUTO'}</span><h2>{editingId ? 'Atualizar item' : 'Cadastrar item'}</h2></div>{editingId && <button type="button" className="text-button" onClick={resetProduct}>Cancelar edição</button>}</div><div className="stock-photo-field"><div className="stock-photo-preview">{photoPreview ? <img src={photoPreview} alt="Prévia do produto" /> : <span>▣</span>}</div><div><label className="stock-photo-button">Adicionar foto<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => selectPhoto(event.target.files?.[0])} /></label><small>JPG, PNG, WebP ou GIF. Máximo de 5 MB.</small>{(photoPreview || photoUrl) && <button type="button" className="remove-photo-button" onClick={() => { setPhotoUrl(''); setPhotoFile(null); setPhotoPreview('') }}>Remover foto</button>}</div></div><label>Nome<input value={name} onChange={(event) => setName(event.target.value)} required /></label><div className="form-grid"><label>Categoria<input value={category} onChange={(event) => setCategory(event.target.value)} /></label><label>Unidade<input value={unit} onChange={(event) => setUnit(event.target.value)} required /></label><label>Estoque mínimo<input type="number" min="0" value={minimum} onChange={(event) => setMinimum(event.target.value)} required /></label></div><button className="button button-gold" type="submit" disabled={savingProduct}>{savingProduct ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Cadastrar produto'}</button></form><form className="admin-panel admin-form" onSubmit={moveStock}><div className="panel-heading"><div><span className="eyebrow">MOVIMENTAÇÃO</span><h2>Entrada ou saída</h2></div></div><label>Produto<select value={productId} onChange={(event) => setProductId(event.target.value)} required><option value="">Selecione</option>{stock.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><div className="form-grid"><label>Tipo<select value={movementType} onChange={(event) => setMovementType(event.target.value as 'entry' | 'exit')}><option value="entry">Entrada</option><option value="exit">Saída</option></select></label><label>Quantidade<input type="number" min="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} required /></label></div><label>Motivo<input value={reason} onChange={(event) => setReason(event.target.value)} /></label><button className="button button-gold" type="submit">Registrar movimentação</button></form></div><div className="stock-grid">{stock.map((item) => <article key={item.id} className={`${item.current_stock <= item.minimum_stock ? 'stock-card low' : 'stock-card'}${item.active ? '' : ' inactive'}`}><div className="stock-card-photo">{item.photo_url ? <img src={item.photo_url} alt={item.name} /> : <span>{item.name.charAt(0)}</span>}</div><span>{item.category || 'Produto'}</span><h3>{item.name}</h3><strong>{item.current_stock} <small>{item.unit}</small></strong><p>Mínimo: {item.minimum_stock}</p><div className="stock-card-actions"><button type="button" className="edit-button" onClick={() => editProduct(item)}>Editar</button><button type="button" className={item.active ? 'toggle active' : 'toggle'} onClick={() => void toggleProduct(item)}>{item.active ? 'Ativo' : 'Inativo'}</button><button type="button" className="delete-button" onClick={() => void removeProduct(item)}>Excluir</button></div></article>)}</div></div>
 }
 
 function SettingsView({ settings, setSettings, onSaved, setError }: { settings: SiteSettings; setSettings: (value: SiteSettings) => void; onSaved: () => void; setError: (value: string) => void }) {

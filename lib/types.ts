@@ -83,5 +83,24 @@ export interface StockBalance {
   unit: string
   minimum_stock: number
   current_stock: number
+  photo_url: string | null
   active: boolean
+}
+
+export interface ClientProfile {
+  id: string
+  user_id: string
+  full_name: string
+  phone: string
+  email: string | null
+}
+
+export interface ClientAppointment {
+  id: string
+  starts_at: string
+  ends_at: string
+  status: AppointmentStatus
+  notes: string | null
+  services: { name: string; price: number; duration_minutes: number } | null
+  barbers: { name: string } | null
 }
