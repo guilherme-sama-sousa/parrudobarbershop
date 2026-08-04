@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import { readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const root = new URL('..', import.meta.url).pathname
+const root = fileURLToPath(new URL('..', import.meta.url))
 const required = [
   'app/page.tsx',
   'app/admin/page.tsx',
@@ -12,6 +13,7 @@ const required = [
   'app/api/admin/users/route.ts',
   'app/api/admin/bootstrap/route.ts',
   'supabase/migrations/001_init.sql',
+  'supabase/migrations/003_area_cliente_e_fotos_estoque.sql',
   '.env.example',
 ]
 
@@ -29,6 +31,7 @@ const css = await readFile(join(root, 'app/globals.css'), 'utf8')
 assert.equal((css.match(/\{/g) || []).length, (css.match(/\}/g) || []).length, 'CSS deve ter chaves balanceadas')
 
 const sql = await readFile(join(root, 'supabase/migrations/001_init.sql'), 'utf8')
+const clientSql = await readFile(join(root, 'supabase/migrations/003_area_cliente_e_fotos_estoque.sql'), 'utf8')
 assert.match(sql, /enable row level security/i)
 assert.match(sql, /appointments_no_overlap/i)
 assert.match(sql, /create_appointment/i)
@@ -36,6 +39,10 @@ assert.match(sql, /get_available_slots/i)
 assert.match(sql, /validate_blocked_time/i)
 assert.match(sql, /validate_stock_movement/i)
 assert.doesNotMatch(sql, /parrudo123/i)
+assert.match(clientSql, /create_client_appointment/i)
+assert.match(clientSql, /cancel_client_appointment/i)
+assert.match(clientSql, /product-images/i)
+assert.match(clientSql, /auth\.uid\(\)/i)
 
 const login = await readFile(join(root, 'app/admin/login/page.tsx'), 'utf8')
 assert.match(login, /signInWithPassword/)

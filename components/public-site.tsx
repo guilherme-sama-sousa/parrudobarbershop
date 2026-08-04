@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { BookingFlow } from '@/components/booking-flow'
+import { useEffect, useState } from 'react'
+import { ClientPortal } from '@/components/client-portal'
 import { Logo } from '@/components/logo'
-import { currencyFormatter } from '@/lib/format'
 import { getErrorMessage } from '@/lib/error-message'
 import { getSupabaseBrowserClient, getSupabaseConfigStatus } from '@/lib/supabase/client'
 import type { Barber, Plan, Service, SiteSettings } from '@/lib/types'
@@ -50,7 +49,6 @@ export function PublicSite() {
   const [services, setServices] = useState<Service[]>(demoServices)
   const [barbers, setBarbers] = useState<Barber[]>(demoBarbers)
   const [plans, setPlans] = useState<Plan[]>(demoPlans)
-  const [showPlans, setShowPlans] = useState(false)
   const [loading, setLoading] = useState(configured)
   const [loadError, setLoadError] = useState('')
 
@@ -72,10 +70,9 @@ export function PublicSite() {
         if (barbersResult.error) throw barbersResult.error
         setServices((servicesResult.data ?? []) as Service[])
         setBarbers((barbersResult.data ?? []) as Barber[])
-        // Planos são opcionais: se a migração 002 ainda não rodou, o site segue sem eles.
         setPlans(plansResult.error ? [] : ((plansResult.data ?? []) as Plan[]))
-      } catch (error) {
-        setLoadError(getErrorMessage(error, 'Não foi possível carregar os dados.'))
+      } catch (caught) {
+        setLoadError(getErrorMessage(caught, 'Não foi possível carregar os dados da barbearia.'))
       } finally {
         setLoading(false)
       }
@@ -84,94 +81,13 @@ export function PublicSite() {
     void load()
   }, [configured])
 
-  const whatsappLink = useMemo(() => {
-    if (!settings.whatsapp) return null
-    const digits = settings.whatsapp.replace(/\D/g, '')
-    return digits ? `https://wa.me/${digits}` : null
-  }, [settings.whatsapp])
+  if (loading) return <main className="client-auth-shell"><div className="client-auth-card client-auth-loading"><Logo logoUrl={settings.logo_url} /><span>Carregando Parrudo...</span></div></main>
 
-  return (
-    <main className="single-shell">
-      <header className="single-header">
-        <Logo logoUrl={settings.logo_url} compact />
-        <div className="single-header-actions">
-          {plans.length > 0 && (
-            <button type="button" className="button button-plans button-small" onClick={() => setShowPlans(true)}>
-              Planos mensais
-            </button>
-          )}
-          {whatsappLink && (
-            <a href={whatsappLink} target="_blank" rel="noreferrer" className="button button-gold button-small">
-              WhatsApp
-            </a>
-          )}
-        </div>
-      </header>
+  const configurationError = configStatus === 'missing'
+    ? 'Modo de demonstração: configure o Supabase para liberar cadastros e agendamentos reais.'
+    : configStatus === 'invalid_url'
+      ? 'A variável NEXT_PUBLIC_SUPABASE_URL não contém uma URL válida. Corrija o valor na hospedagem e publique novamente.'
+      : loadError
 
-      {configStatus === 'missing' && (
-        <div className="demo-banner">
-          <div className="page-container">
-            <strong>Modo de demonstração:</strong> conecte o Supabase para liberar agendamentos reais.
-          </div>
-        </div>
-      )}
-      {configStatus === 'invalid_url' && (
-        <div className="demo-banner demo-banner-error">
-          <div className="page-container">
-            <strong>Configuração incorreta:</strong> a variável NEXT_PUBLIC_SUPABASE_URL na Vercel não contém uma URL válida. O valor deve ser apenas https://SEU-PROJETO.supabase.co (sem o nome da variável, sem aspas e sem espaços). Corrija e faça Redeploy.
-          </div>
-        </div>
-      )}
-
-      <section className="single-booking" aria-label="Agendamento online">
-        {loading ? (
-          <div className="loading-card">Carregando agenda...</div>
-        ) : (
-          <BookingFlow services={services} barbers={barbers} configured={configured} businessName={settings.business_name} />
-        )}
-      </section>
-
-      {loadError && <div className="floating-alert" role="alert">{loadError}</div>}
-
-      {showPlans && (
-        <div className="plans-overlay" role="dialog" aria-modal="true" aria-label="Planos mensais">
-          <div className="plans-modal">
-            <div className="plans-modal-head">
-              <div>
-                <span className="eyebrow">PLANO MENSAL</span>
-                <h2>Pagamento até o 5º dia útil</h2>
-              </div>
-              <button type="button" className="plans-close" aria-label="Fechar" onClick={() => setShowPlans(false)}>✕</button>
-            </div>
-            <div className="plans-list">
-              {plans.map((plan) => (
-                <article key={plan.id} className="plan-row">
-                  <div>
-                    <strong>{plan.name}</strong>
-                    <span>{plan.description}</span>
-                  </div>
-                  <b>{currencyFormatter.format(Number(plan.price))}</b>
-                </article>
-              ))}
-            </div>
-            {whatsappLink && (
-              <a
-                href={`${whatsappLink}?text=${encodeURIComponent('Olá! Quero saber mais sobre os planos mensais.')}`}
-                target="_blank"
-                rel="noreferrer"
-                className="button button-gold"
-              >
-                Assinar pelo WhatsApp
-              </a>
-            )}
-          </div>
-        </div>
-      )}
-
-      <footer className="single-footer">
-        <span>{settings.address || settings.instagram || settings.business_name}</span>
-        <a href="/admin/login" className="admin-link">Login do administrador</a>
-      </footer>
-    </main>
-  )
+  return <ClientPortal settings={settings} services={services} barbers={barbers} plans={plans} configured={configured} configurationError={configurationError} />
 }

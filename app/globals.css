@@ -345,3 +345,163 @@ th { color: #6d6d6d; font-size: .61rem; letter-spacing: .08em; text-transform: u
 .login-mode-switch { margin: -4px 0 4px; }
 .login-mode-switch button { background: none; border: none; padding: 0; color: var(--gold); font-size: .8rem; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .form-success { margin: 0; padding: 11px 13px; border: 1px solid #2c5a3a; border-radius: 12px; background: #0d1f14; color: #8fdcae; font-size: .82rem; }
+
+/* ===== Estoque com fotos e ações ===== */
+.stock-photo-field { display: flex; align-items: center; gap: 16px; padding: 14px; border: 1px dashed #343434; border-radius: 14px; background: #0d0d0d; }
+.stock-photo-preview { flex: 0 0 86px; width: 86px; height: 86px; display: grid; place-items: center; overflow: hidden; border: 1px solid #3a3423; border-radius: 15px; background: #19160f; color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 2rem; }
+.stock-photo-preview img, .stock-card-photo img { width: 100%; height: 100%; object-fit: cover; }
+.stock-photo-field > div:last-child { display: grid; justify-items: start; gap: 6px; }
+.stock-photo-field small { color: #686868; font-size: .64rem; }
+.stock-photo-button { min-height: 36px; display: inline-flex; align-items: center; border: 1px solid #4b4024; border-radius: 999px; background: #1c170d; color: var(--gold); padding: 0 14px; cursor: pointer; }
+.stock-photo-button input { position: absolute; width: 1px; height: 1px; min-height: 0; opacity: 0; pointer-events: none; }
+.remove-photo-button { border: 0; background: transparent; color: #df7777; padding: 0; font-size: .65rem; font-weight: 800; }
+.stock-card { position: relative; min-height: 230px; }
+.stock-card.inactive { opacity: .58; }
+.stock-card-photo { width: 58px; height: 58px; display: grid; place-items: center; margin-bottom: 12px; overflow: hidden; border: 1px solid #3b3423; border-radius: 13px; background: #1a170f; color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 1.55rem; }
+.stock-card-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 13px; padding-top: 12px; border-top: 1px solid #282828; }
+.delete-button { min-height: 32px; border: 1px solid #4d2d2d; border-radius: 999px; background: #1c0e0e; color: #ef8585; padding: 0 12px; font-size: .62rem; font-weight: 900; }
+
+/* ===== Cadastro e login do cliente ===== */
+.client-auth-shell { min-height: 100dvh; display: grid; background: #060606; }
+.client-auth-brand { display: none; min-height: 100dvh; padding: 52px clamp(34px, 6vw, 88px); background: radial-gradient(circle at 16% 20%, rgba(213,179,106,.16), transparent 27%), linear-gradient(145deg, #11100e, #050505 65%); }
+.client-auth-brand > .brand-logo { align-self: start; }
+.client-auth-brand > div { align-self: center; max-width: 680px; }
+.client-auth-brand h1 { margin: 15px 0 18px; font-family: 'Bebas Neue', sans-serif; font-size: clamp(4rem, 7vw, 7.2rem); font-weight: 400; line-height: .86; letter-spacing: .015em; text-transform: uppercase; }
+.client-auth-brand p { max-width: 590px; margin: 0; color: #979797; font-size: 1rem; }
+.client-auth-brand ul { align-self: end; display: flex; flex-wrap: wrap; gap: 10px 24px; margin: 0; padding: 0; color: #898989; list-style: none; font-size: .75rem; }
+.client-auth-brand li::before { content: '✓'; margin-right: 8px; color: var(--gold); }
+.client-auth-form-wrap { min-height: 100dvh; display: grid; place-items: center; padding: 22px 16px; background: radial-gradient(circle at 80% 8%, rgba(213,179,106,.1), transparent 30%), #080808; }
+.client-auth-card { width: min(100%, 480px); display: grid; gap: 16px; padding: 22px; border: 1px solid #2a2a2a; border-radius: 24px; background: rgba(18,18,18,.97); box-shadow: var(--shadow); }
+.client-auth-card > .button { width: 100%; }
+.client-auth-loading { place-self: center; justify-items: center; color: #858585; }
+.auth-mobile-logo { display: flex; justify-content: center; margin-bottom: 2px; }
+.auth-tabs { display: grid; grid-template-columns: repeat(2, 1fr); padding: 4px; border: 1px solid #2a2a2a; border-radius: 999px; background: #0a0a0a; }
+.auth-tabs button { min-height: 40px; border: 0; border-radius: 999px; background: transparent; color: #777; font-size: .76rem; font-weight: 800; }
+.auth-tabs button.active { background: var(--gold); color: #090909; }
+.auth-title h2 { margin: 6px 0 4px; font-size: 1.6rem; }
+.auth-title p { margin: 0; color: #777; font-size: .76rem; }
+.auth-form-grid { display: grid; gap: 14px; }
+.auth-forgot { justify-self: end; }
+.auth-admin-link { justify-self: center; }
+.auth-config-note { margin: 0; color: #876f3f; font-size: .68rem; text-align: center; }
+
+/* ===== Aplicativo do cliente ===== */
+.client-app-shell { min-height: 100dvh; background: #090909; }
+.client-sidebar { display: none; }
+.client-app-content { min-width: 0; min-height: 100dvh; padding: 16px 14px 94px; }
+.client-topbar { min-height: 74px; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; padding-bottom: 15px; border-bottom: 1px solid #222; }
+.client-topbar h1 { margin: 3px 0 0; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; font-weight: 400; letter-spacing: .04em; }
+.client-avatar { flex: 0 0 42px; width: 42px; height: 42px; border: 1px solid #5a4823; border-radius: 50%; background: var(--gold); color: #090909; font-weight: 900; }
+.client-view { width: min(100%, 1180px); margin: 0 auto; }
+.client-home, .client-list-view, .client-profile-view, .client-booking-view { display: grid; gap: 18px; }
+.client-welcome { position: relative; display: grid; gap: 22px; padding: 24px; overflow: hidden; border: 1px solid #342e20; border-radius: 22px; background: radial-gradient(circle at 90% 15%, rgba(213,179,106,.22), transparent 31%), linear-gradient(145deg, #1b1812, #101010); }
+.client-welcome::after { content: 'P'; position: absolute; right: 12px; bottom: -58px; color: rgba(213,179,106,.055); font-family: 'Bebas Neue', sans-serif; font-size: 13rem; line-height: 1; pointer-events: none; }
+.client-welcome > div, .client-welcome > button { position: relative; z-index: 1; }
+.client-welcome h2, .client-view-title h2 { margin: 7px 0 7px; font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.2rem, 8vw, 3.8rem); font-weight: 400; line-height: .95; letter-spacing: .025em; text-transform: uppercase; }
+.client-welcome p, .client-view-title p { margin: 0; color: #858585; font-size: .82rem; }
+.client-welcome .button { justify-self: start; }
+.client-dashboard-grid { display: grid; gap: 18px; }
+.client-panel { min-width: 0; padding: 18px; border: 1px solid #282828; border-radius: 18px; background: #121212; }
+.client-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 16px; }
+.client-panel-heading h3 { margin: 4px 0 0; font-size: 1rem; }
+.panel-icon { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid #3c3524; border-radius: 11px; color: var(--gold); }
+.client-empty { display: grid; gap: 12px; padding: 20px 0; color: #777; font-size: .78rem; text-align: center; }
+.client-empty p { margin: 0; }
+.shortcut-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
+.shortcut-grid button { min-width: 0; min-height: 128px; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 14px; border: 1px solid #282828; border-radius: 14px; background: #0d0d0d; color: #ddd; text-align: left; }
+.shortcut-grid button:hover { border-color: #5b4924; background: #15130e; }
+.shortcut-grid button > span { color: var(--gold); font-size: 1.35rem; }
+.shortcut-grid button strong { margin-top: auto; font-size: .74rem; }
+.shortcut-grid button small { max-width: 100%; overflow: hidden; color: #666; font-size: .61rem; text-overflow: ellipsis; white-space: nowrap; }
+.client-view-title { max-width: 680px; }
+.client-booking-view .booking-card { width: min(100%, 620px); }
+.booking-progress-client { grid-template-columns: repeat(4, 1fr); }
+.form-actions-next { grid-template-columns: 1fr; }
+.form-actions-next .button { justify-self: end; min-width: 220px; }
+.choice-professional { justify-content: flex-start; }
+.choice-professional > div { flex: 1; }
+.choice-avatar { flex: 0 0 42px; width: 42px; height: 42px; display: grid; place-items: center; overflow: hidden; border: 1px solid #443a24; border-radius: 50%; background: #1c1810; color: var(--gold); font-weight: 900; }
+.choice-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.client-appointment-list { display: grid; gap: 10px; }
+.client-appointment-card { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 13px; padding: 14px; border: 1px solid #292929; border-radius: 16px; background: #121212; }
+.appointment-date-box { width: 58px; height: 62px; display: grid; align-content: center; justify-items: center; border: 1px solid #443820; border-radius: 13px; background: #1a160e; }
+.appointment-date-box strong { color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 1.7rem; font-weight: 400; line-height: .8; }
+.appointment-date-box span { margin-top: 6px; color: #8a7a58; font-size: .58rem; font-weight: 900; text-transform: uppercase; }
+.appointment-card-info { min-width: 0; display: grid; gap: 9px; }
+.appointment-card-info h3 { margin: 0 0 3px; font-size: .82rem; }
+.appointment-card-info > div > span { display: block; overflow: hidden; color: #6d6d6d; font-size: .64rem; text-overflow: ellipsis; white-space: nowrap; }
+.appointment-card-info > .status-badge { justify-self: start; }
+.cancel-client-appointment { grid-column: 1 / -1; min-height: 36px; border: 1px solid #4b2c2c; border-radius: 10px; background: #1a0d0d; color: #e37a7a; font-size: .68rem; font-weight: 800; }
+.client-plan-grid { display: grid; gap: 12px; }
+.client-plan-card { display: flex; flex-direction: column; min-height: 280px; padding: 20px; border: 1px solid #302a1d; border-radius: 18px; background: linear-gradient(150deg, #171511, #101010); }
+.client-plan-card h3 { margin: 10px 0 4px; font-family: 'Bebas Neue', sans-serif; color: var(--gold); font-size: 2rem; font-weight: 400; letter-spacing: .06em; }
+.client-plan-card p { margin: 0; color: #7b7b7b; font-size: .74rem; }
+.client-plan-card > strong { margin-top: auto; padding: 24px 0 14px; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; font-weight: 400; }
+.client-plan-card > strong small { color: #777; font-family: Inter, sans-serif; font-size: .62rem; }
+.client-profile-form { width: min(100%, 720px); display: grid; gap: 20px; }
+.profile-avatar-large { width: 74px; height: 74px; display: grid; place-items: center; border-radius: 50%; background: var(--gold); color: #090909; font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; }
+.client-profile-form input[readonly] { color: #777; cursor: not-allowed; }
+.profile-actions { display: flex; flex-direction: column; gap: 9px; }
+.client-alert { width: min(100%, 1180px); display: flex; align-items: center; justify-content: space-between; gap: 15px; margin: 0 auto 16px; padding: 12px 14px; border-radius: 12px; font-size: .73rem; }
+.client-alert button { border: 0; background: transparent; color: inherit; }
+.client-alert-error { border: 1px solid #5b3030; background: #231010; color: #f0a0a0; }
+.client-alert-success { border: 1px solid #28543a; background: #0e2115; color: #91d8aa; }
+.client-bottom-nav { position: fixed; inset: auto 0 0; z-index: 50; min-height: 72px; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border-top: 1px solid #282828; background: rgba(10,10,10,.96); backdrop-filter: blur(16px); padding: 5px max(4px, env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom)) max(4px, env(safe-area-inset-left)); }
+.client-bottom-nav button { min-width: 0; display: grid; place-items: center; align-content: center; gap: 3px; border: 0; background: transparent; color: #626262; }
+.client-bottom-nav button > span { font-size: 1.1rem; line-height: 1; }
+.client-bottom-nav small { max-width: 100%; overflow: hidden; font-size: .52rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.client-bottom-nav button.active { color: var(--gold); }
+
+@media (min-width: 560px) {
+  .auth-form-grid, .profile-actions { grid-template-columns: repeat(2, 1fr); }
+  .client-welcome { grid-template-columns: 1fr auto; align-items: end; padding: 30px; }
+  .client-appointment-card { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .cancel-client-appointment { grid-column: auto; min-width: 88px; }
+  .client-plan-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 760px) {
+  .client-app-content { padding: 22px 24px 100px; }
+  .client-dashboard-grid { grid-template-columns: 1.08fr .92fr; }
+  .client-plan-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (min-width: 980px) {
+  .client-auth-shell { grid-template-columns: minmax(0, 1.18fr) minmax(420px, .82fr); }
+  .client-auth-brand { display: grid; }
+  .client-auth-form-wrap { padding: 38px; }
+  .auth-mobile-logo { display: none; }
+  .client-app-shell { display: grid; grid-template-columns: 250px minmax(0, 1fr); }
+  .client-sidebar { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; padding: 24px 15px; border-right: 1px solid #242424; background: #0d0d0d; }
+  .client-sidebar nav { display: grid; gap: 6px; margin-top: 36px; }
+  .client-sidebar nav button { min-height: 48px; display: flex; align-items: center; gap: 13px; border: 0; border-radius: 11px; background: transparent; color: #787878; padding: 0 14px; font-size: .78rem; font-weight: 800; text-align: left; }
+  .client-sidebar nav button span { width: 22px; color: #5a5a5a; font-size: 1.1rem; text-align: center; }
+  .client-sidebar nav button.active, .client-sidebar nav button:hover { background: rgba(213,179,106,.08); color: var(--gold); }
+  .client-sidebar-foot { display: grid; gap: 3px; margin-top: auto; padding: 16px 9px 0; border-top: 1px solid #252525; }
+  .client-sidebar-foot small { color: #5f5f5f; font-size: .6rem; }
+  .client-sidebar-foot strong { overflow: hidden; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+  .client-sidebar-foot button { justify-self: start; margin-top: 8px; border: 0; background: transparent; color: #d47474; padding: 0; font-size: .65rem; font-weight: 800; }
+  .client-app-content { padding: 26px 32px 42px; }
+  .client-bottom-nav { display: none; }
+  .client-view-title { margin-bottom: 8px; }
+  .client-booking-view { grid-template-columns: minmax(240px, .65fr) minmax(500px, 1.35fr); align-items: start; }
+  .client-booking-view .client-view-title { position: sticky; top: 28px; }
+}
+
+@media (min-width: 1280px) {
+  .client-app-shell { grid-template-columns: 272px minmax(0, 1fr); }
+  .client-app-content { padding: 28px 42px 48px; }
+}
+
+@media (max-width: 430px) {
+  .client-auth-card { padding: 18px; border-radius: 19px; }
+  .client-auth-form-wrap { padding: 12px; }
+  .client-topbar .eyebrow { font-size: .57rem; }
+  .client-welcome { padding: 20px; }
+  .shortcut-grid button { min-height: 116px; padding: 12px; }
+  .client-booking-view .booking-card { padding: 16px; border-radius: 18px; }
+  .client-booking-view .booking-progress span { width: 26px; height: 26px; }
+  .client-appointment-card { padding: 12px; }
+  .stock-photo-field { align-items: flex-start; }
+  .stock-photo-preview { flex-basis: 72px; width: 72px; height: 72px; }
+}
