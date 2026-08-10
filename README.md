@@ -24,8 +24,10 @@ O banco impede dois agendamentos sobrepostos para o mesmo barbeiro (restrição 
 
 ## Painel administrativo
 
-- Dashboard com agendamentos do dia, próximos horários, faturamento realizado e alertas de estoque.
+- Dashboard com agendamentos do dia, alertas de estoque, entradas, saídas, saldo e faturamento mensal por barbeiro.
 - Agenda diária com mudança de status.
+- **Financeiro**: lançamento manual de entradas e saídas com valor, data, descrição e barbeiro opcional, além do histórico mensal.
+- **Assinantes**: cadastro simplificado com nome e telefone, acompanhamento mensal, baixa de pagamento, reabertura e ativação/inativação.
 - Barbeiros: cadastrar, editar, foto, especialidades, ativar/inativar.
 - Serviços: cadastrar, editar, preço, duração, ativar/inativar.
 - Bloqueios de agenda por barbeiro.
@@ -47,6 +49,7 @@ O banco impede dois agendamentos sobrepostos para o mesmo barbeiro (restrição 
 2. Abra **SQL Editor** e execute todo o conteúdo de `supabase/migrations/001_init.sql` (uma única vez).
 3. Execute `supabase/migrations/002_precos_e_planos.sql` — aplica a tabela de preços oficial nos serviços e cria os planos mensais. Em banco já existente desta implantação, execute SOMENTE o 002.
 4. Execute `supabase/migrations/003_area_cliente_e_fotos_estoque.sql` — cria o login do cliente, histórico/cancelamento seguro, foto dos produtos e o bucket de imagens.
+5. Execute `supabase/migrations/004_financeiro_e_assinantes.sql` — cria o fluxo de caixa, faturamento por barbeiro, assinantes e baixas mensais.
 
 Em um banco já publicado, execute apenas as migrações ainda não aplicadas, na ordem numérica.
 

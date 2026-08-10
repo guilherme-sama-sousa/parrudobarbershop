@@ -104,3 +104,34 @@ export interface ClientAppointment {
   services: { name: string; price: number; duration_minutes: number } | null
   barbers: { name: string } | null
 }
+
+export type CashMovementType = 'entry' | 'exit'
+
+export interface CashTransaction {
+  id: string
+  movement_type: CashMovementType
+  amount: number
+  description: string
+  barber_id: string | null
+  occurred_on: string
+  created_at: string
+  barbers: { name: string } | null
+}
+
+export interface Subscriber {
+  id: string
+  full_name: string
+  phone: string
+  active: boolean
+  started_on: string
+  created_at: string
+  updated_at: string
+}
+
+export interface SubscriberPayment {
+  id: string
+  subscriber_id: string
+  reference_month: string
+  paid_at: string
+  created_at: string
+}
