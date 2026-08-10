@@ -2,17 +2,20 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { CashFlowView, FinanceDashboardPanel, SubscribersView } from '@/components/admin-finance'
 import { Logo } from '@/components/logo'
 import { bahiaDateTimeFormatter, currencyFormatter, toLocalDateInput } from '@/lib/format'
 import { getErrorMessage } from '@/lib/error-message'
 import { getSupabaseBrowserClient, isSupabaseConfigured } from '@/lib/supabase/client'
-import type { AdminUser, Appointment, AppointmentStatus, Barber, BlockedTime, BusinessHour, Plan, Service, SiteSettings, StockBalance } from '@/lib/types'
+import type { AdminUser, Appointment, AppointmentStatus, Barber, BlockedTime, BusinessHour, CashTransaction, Plan, Service, SiteSettings, StockBalance, Subscriber, SubscriberPayment } from '@/lib/types'
 
-type Tab = 'dashboard' | 'agenda' | 'barbers' | 'services' | 'plans' | 'blocks' | 'hours' | 'stock' | 'admins' | 'settings'
+type Tab = 'dashboard' | 'agenda' | 'finance' | 'subscribers' | 'barbers' | 'services' | 'plans' | 'blocks' | 'hours' | 'stock' | 'admins' | 'settings'
 
 const tabLabels: Record<Tab, string> = {
   dashboard: 'Dashboard',
   agenda: 'Agenda',
+  finance: 'Financeiro',
+  subscribers: 'Assinantes',
   barbers: 'Barbeiros',
   services: 'Serviços',
   plans: 'Planos',
@@ -59,6 +62,10 @@ export function AdminDashboard() {
   const [stock, setStock] = useState<StockBalance[]>([])
   const [hours, setHours] = useState<BusinessHour[]>([])
   const [plans, setPlans] = useState<Plan[]>([])
+  const [cashTransactions, setCashTransactions] = useState<CashTransaction[]>([])
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([])
+  const [subscriberPayments, setSubscriberPayments] = useState<SubscriberPayment[]>([])
+  const [financeReady, setFinanceReady] = useState(true)
   const [agendaDate, setAgendaDate] = useState(toLocalDateInput())
 
   const flash = (message: string) => {
@@ -83,7 +90,7 @@ export function AdminDashboard() {
       }
 
       const userId = sessionData.session.user.id
-      const [profileResult, settingsResult, servicesResult, barbersResult, appointmentsResult, blocksResult, stockResult, hoursResult, plansResult] = await Promise.all([
+      const [profileResult, settingsResult, servicesResult, barbersResult, appointmentsResult, blocksResult, stockResult, hoursResult, plansResult, cashResult, subscribersResult, subscriberPaymentsResult] = await Promise.all([
         supabase.from('profiles').select('full_name, role').eq('id', userId).single(),
         supabase.from('site_settings').select('*').eq('id', 1).single(),
         supabase.from('services').select('*').order('name'),
@@ -93,6 +100,9 @@ export function AdminDashboard() {
         supabase.from('stock_balances').select('*').order('name'),
         supabase.from('business_hours').select('*').order('day_of_week'),
         supabase.from('plans').select('*').order('sort_order'),
+        supabase.from('cash_transactions').select('id, movement_type, amount, description, barber_id, occurred_on, created_at, barbers(name)').order('occurred_on', { ascending: false }).order('created_at', { ascending: false }).limit(1000),
+        supabase.from('subscribers').select('*').order('full_name'),
+        supabase.from('subscriber_payments').select('id, subscriber_id, reference_month, paid_at, created_at').order('reference_month', { ascending: false }).limit(2000),
       ])
 
       if (profileResult.error) throw new Error('Usuário sem perfil administrativo. Verifique a etapa de criação do primeiro admin no README.')
@@ -113,6 +123,11 @@ export function AdminDashboard() {
       setHours((hoursResult.data ?? []) as BusinessHour[])
       // Planos são opcionais até a migração 002 rodar.
       setPlans(plansResult.error ? [] : ((plansResult.data ?? []) as Plan[]))
+      const financeIsReady = !cashResult.error && !subscribersResult.error && !subscriberPaymentsResult.error
+      setFinanceReady(financeIsReady)
+      setCashTransactions(financeIsReady ? ((cashResult.data ?? []) as unknown as CashTransaction[]) : [])
+      setSubscribers(financeIsReady ? ((subscribersResult.data ?? []) as Subscriber[]) : [])
+      setSubscriberPayments(financeIsReady ? ((subscriberPaymentsResult.data ?? []) as SubscriberPayment[]) : [])
     } catch (caught) {
       setError(getErrorMessage(caught, 'Falha ao carregar o painel.'))
     } finally {
@@ -166,8 +181,10 @@ export function AdminDashboard() {
         {error && <div className="admin-error"><strong>Não foi possível abrir o painel.</strong><span>{error}</span><button onClick={() => void loadAll()}>Tentar novamente</button></div>}
         {notice && <div className="admin-notice">✓ {notice}</div>}
 
-        {!error && tab === 'dashboard' && <DashboardView appointments={appointments} upcoming={upcoming} barbers={barbers} services={services} revenue={completedRevenue} lowStock={lowStock} />}
+        {!error && tab === 'dashboard' && <DashboardView appointments={appointments} upcoming={upcoming} barbers={barbers} services={services} revenue={completedRevenue} lowStock={lowStock} cashTransactions={cashTransactions} subscribers={subscribers} subscriberPayments={subscriberPayments} financeReady={financeReady} />}
         {!error && tab === 'agenda' && <AgendaView appointments={todayAppointments} date={agendaDate} setDate={setAgendaDate} onStatus={async (id, status) => { const supabase = getSupabaseBrowserClient(); const { error: updateError } = await supabase.from('appointments').update({ status }).eq('id', id); if (updateError) return setError(updateError.message); flash('Status atualizado.'); await loadAll() }} />}
+        {!error && tab === 'finance' && <CashFlowView cashTransactions={cashTransactions} barbers={barbers} financeReady={financeReady} onSaved={async () => { flash('Lançamento atualizado.'); await loadAll() }} setError={setError} />}
+        {!error && tab === 'subscribers' && <SubscribersView subscribers={subscribers} subscriberPayments={subscriberPayments} financeReady={financeReady} onSaved={async () => { flash('Assinantes atualizados.'); await loadAll() }} setError={setError} />}
         {!error && tab === 'barbers' && <BarbersView barbers={barbers} onSaved={async () => { flash('Barbeiro salvo.'); await loadAll() }} setError={setError} />}
         {!error && tab === 'services' && <ServicesView services={services} onSaved={async () => { flash('Serviço salvo.'); await loadAll() }} setError={setError} />}
         {!error && tab === 'plans' && <PlansView plans={plans} onSaved={async () => { flash('Plano salvo.'); await loadAll() }} setError={setError} />}
@@ -181,7 +198,7 @@ export function AdminDashboard() {
   )
 }
 
-function DashboardView({ appointments, upcoming, barbers, services, revenue, lowStock }: { appointments: Appointment[]; upcoming: Appointment[]; barbers: Barber[]; services: Service[]; revenue: number; lowStock: StockBalance[] }) {
+function DashboardView({ appointments, upcoming, barbers, services, revenue, lowStock, cashTransactions, subscribers, subscriberPayments, financeReady }: { appointments: Appointment[]; upcoming: Appointment[]; barbers: Barber[]; services: Service[]; revenue: number; lowStock: StockBalance[]; cashTransactions: CashTransaction[]; subscribers: Subscriber[]; subscriberPayments: SubscriberPayment[]; financeReady: boolean }) {
   const today = toLocalDateInput()
   const todayCount = appointments.filter((item) => toLocalDateInput(new Date(item.starts_at)) === today && item.status !== 'cancelled').length
   return <div className="admin-stack">
@@ -195,6 +212,7 @@ function DashboardView({ appointments, upcoming, barbers, services, revenue, low
       <section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">AGENDA</span><h2>Próximos horários</h2></div></div><div className="appointment-list">{upcoming.map((item) => <AppointmentRow key={item.id} item={item} />)}{!upcoming.length && <EmptyState text="Nenhum agendamento futuro." />}</div></section>
       <section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">ESTOQUE</span><h2>Reposição necessária</h2></div></div><div className="stock-alert-list">{lowStock.map((item) => <div key={item.id}><span>{item.name}</span><strong>{item.current_stock} {item.unit}</strong></div>)}{!lowStock.length && <EmptyState text="Estoque dentro dos mínimos." />}</div></section>
     </div>
+    <FinanceDashboardPanel cashTransactions={cashTransactions} barbers={barbers} subscribers={subscribers} subscriberPayments={subscriberPayments} financeReady={financeReady} />
   </div>
 }
 
@@ -366,7 +384,7 @@ function SettingsView({ settings, setSettings, onSaved, setError }: { settings: 
 
 function AppointmentRow({ item }: { item: Appointment }) { return <div className="appointment-row"><span className="appointment-time">{new Date(item.starts_at).toLocaleTimeString('pt-BR', { timeZone: 'America/Bahia', hour: '2-digit', minute: '2-digit' })}</span><div><strong>{item.clients?.full_name}</strong><small>{item.services?.name} • {item.barbers?.name}</small></div><span className={`status-badge status-${item.status}`}>{statusLabel[item.status]}</span></div> }
 function EmptyState({ text }: { text: string }) { return <div className="empty-state">{text}</div> }
-function tabIcon(tab: Tab) { return ({ dashboard: '▦', agenda: '◷', barbers: '♟', services: '✂', plans: '❖', blocks: '⊘', hours: '◔', stock: '▣', admins: '♔', settings: '⚙' } as Record<Tab, string>)[tab] }
+function tabIcon(tab: Tab) { return ({ dashboard: '▦', agenda: '◷', finance: '$', subscribers: '◎', barbers: '♟', services: '✂', plans: '❖', blocks: '⊘', hours: '◔', stock: '▣', admins: '♔', settings: '⚙' } as Record<Tab, string>)[tab] }
 
 function HoursView({ hours, onSaved, setError }: { hours: BusinessHour[]; onSaved: () => Promise<void>; setError: (value: string) => void }) {
   const [draft, setDraft] = useState<BusinessHour[]>(hours)

@@ -10,10 +10,12 @@ const required = [
   'app/admin/login/page.tsx',
   'components/booking-flow.tsx',
   'components/admin-dashboard.tsx',
+  'components/admin-finance.tsx',
   'app/api/admin/users/route.ts',
   'app/api/admin/bootstrap/route.ts',
   'supabase/migrations/001_init.sql',
   'supabase/migrations/003_area_cliente_e_fotos_estoque.sql',
+  'supabase/migrations/004_financeiro_e_assinantes.sql',
   '.env.example',
 ]
 
@@ -32,6 +34,7 @@ assert.equal((css.match(/\{/g) || []).length, (css.match(/\}/g) || []).length, '
 
 const sql = await readFile(join(root, 'supabase/migrations/001_init.sql'), 'utf8')
 const clientSql = await readFile(join(root, 'supabase/migrations/003_area_cliente_e_fotos_estoque.sql'), 'utf8')
+const financeSql = await readFile(join(root, 'supabase/migrations/004_financeiro_e_assinantes.sql'), 'utf8')
 assert.match(sql, /enable row level security/i)
 assert.match(sql, /appointments_no_overlap/i)
 assert.match(sql, /create_appointment/i)
@@ -43,6 +46,11 @@ assert.match(clientSql, /create_client_appointment/i)
 assert.match(clientSql, /cancel_client_appointment/i)
 assert.match(clientSql, /product-images/i)
 assert.match(clientSql, /auth\.uid\(\)/i)
+assert.match(financeSql, /create table if not exists public\.cash_transactions/i)
+assert.match(financeSql, /create table if not exists public\.subscribers/i)
+assert.match(financeSql, /create table if not exists public\.subscriber_payments/i)
+assert.match(financeSql, /admins manage cash transactions/i)
+assert.match(financeSql, /enable row level security/i)
 
 const login = await readFile(join(root, 'app/admin/login/page.tsx'), 'utf8')
 assert.match(login, /signInWithPassword/)
