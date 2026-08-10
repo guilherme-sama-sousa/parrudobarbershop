@@ -122,10 +122,12 @@ export interface Subscriber {
   id: string
   full_name: string
   phone: string
+  plan_id: string | null
   active: boolean
   started_on: string
   created_at: string
   updated_at: string
+  plans: { id: string; name: string; price: number; active: boolean } | null
 }
 
 export interface SubscriberPayment {
