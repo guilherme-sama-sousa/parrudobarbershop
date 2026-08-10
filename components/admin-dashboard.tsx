@@ -101,7 +101,7 @@ export function AdminDashboard() {
         supabase.from('business_hours').select('*').order('day_of_week'),
         supabase.from('plans').select('*').order('sort_order'),
         supabase.from('cash_transactions').select('id, movement_type, amount, description, barber_id, occurred_on, created_at, barbers(name)').order('occurred_on', { ascending: false }).order('created_at', { ascending: false }).limit(1000),
-        supabase.from('subscribers').select('*').order('full_name'),
+        supabase.from('subscribers').select('*, plans(id, name, price, active)').order('full_name'),
         supabase.from('subscriber_payments').select('id, subscriber_id, reference_month, paid_at, created_at').order('reference_month', { ascending: false }).limit(2000),
       ])
 
@@ -126,7 +126,7 @@ export function AdminDashboard() {
       const financeIsReady = !cashResult.error && !subscribersResult.error && !subscriberPaymentsResult.error
       setFinanceReady(financeIsReady)
       setCashTransactions(financeIsReady ? ((cashResult.data ?? []) as unknown as CashTransaction[]) : [])
-      setSubscribers(financeIsReady ? ((subscribersResult.data ?? []) as Subscriber[]) : [])
+      setSubscribers(financeIsReady ? ((subscribersResult.data ?? []) as unknown as Subscriber[]) : [])
       setSubscriberPayments(financeIsReady ? ((subscriberPaymentsResult.data ?? []) as SubscriberPayment[]) : [])
     } catch (caught) {
       setError(getErrorMessage(caught, 'Falha ao carregar o painel.'))
@@ -184,7 +184,7 @@ export function AdminDashboard() {
         {!error && tab === 'dashboard' && <DashboardView appointments={appointments} upcoming={upcoming} barbers={barbers} services={services} revenue={completedRevenue} lowStock={lowStock} cashTransactions={cashTransactions} subscribers={subscribers} subscriberPayments={subscriberPayments} financeReady={financeReady} />}
         {!error && tab === 'agenda' && <AgendaView appointments={todayAppointments} date={agendaDate} setDate={setAgendaDate} onStatus={async (id, status) => { const supabase = getSupabaseBrowserClient(); const { error: updateError } = await supabase.from('appointments').update({ status }).eq('id', id); if (updateError) return setError(updateError.message); flash('Status atualizado.'); await loadAll() }} />}
         {!error && tab === 'finance' && <CashFlowView cashTransactions={cashTransactions} barbers={barbers} financeReady={financeReady} onSaved={async () => { flash('Lançamento atualizado.'); await loadAll() }} setError={setError} />}
-        {!error && tab === 'subscribers' && <SubscribersView subscribers={subscribers} subscriberPayments={subscriberPayments} financeReady={financeReady} onSaved={async () => { flash('Assinantes atualizados.'); await loadAll() }} setError={setError} />}
+        {!error && tab === 'subscribers' && <SubscribersView subscribers={subscribers} subscriberPayments={subscriberPayments} plans={plans} financeReady={financeReady} onSaved={async () => { flash('Assinantes atualizados.'); await loadAll() }} setError={setError} />}
         {!error && tab === 'barbers' && <BarbersView barbers={barbers} onSaved={async () => { flash('Barbeiro salvo.'); await loadAll() }} setError={setError} />}
         {!error && tab === 'services' && <ServicesView services={services} onSaved={async () => { flash('Serviço salvo.'); await loadAll() }} setError={setError} />}
         {!error && tab === 'plans' && <PlansView plans={plans} onSaved={async () => { flash('Plano salvo.'); await loadAll() }} setError={setError} />}

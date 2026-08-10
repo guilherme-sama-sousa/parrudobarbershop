@@ -263,10 +263,15 @@ th { color: #6d6d6d; font-size: .61rem; letter-spacing: .08em; text-transform: u
 .finance-dashboard { padding-top: 4px; }
 .finance-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 18px; padding: 4px 1px; }
 .finance-section-heading h2 { margin: 4px 0 0; font-size: 1.28rem; text-transform: capitalize; }
-.finance-section-heading label { width: min(190px, 100%); color: #777; font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.finance-section-heading input { margin-top: 6px; }
+.finance-section-heading > label { width: min(190px, 100%); color: #777; font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.finance-section-heading > label input { margin-top: 6px; }
 .finance-section-heading.compact { align-items: center; margin-bottom: 22px; }
 .finance-section-heading.compact h2 { font-size: 1.12rem; }
+.month-navigation { width: min(510px, 100%); display: grid; grid-template-columns: auto minmax(150px, 190px) auto; align-items: end; gap: 7px; }
+.month-navigation label { color: #777; font-size: .6rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.month-navigation input { min-height: 40px; margin-top: 5px; }
+.month-navigation button { min-height: 40px; border: 1px solid #34302a; border-radius: 10px; background: #171510; color: var(--gold); padding: 0 11px; font-size: .62rem; font-weight: 900; white-space: nowrap; }
+.month-navigation button:hover { border-color: #5b4b2e; background: #201b12; }
 .panel-description { margin: -9px 0 18px; color: #686868; font-size: .69rem; line-height: 1.55; }
 .finance-stats .finance-exit-card strong, .finance-stats .finance-negative-card strong { color: #ef8a8a; }
 .finance-migration-notice { display: grid; gap: 6px; border-color: #5b3c21; background: #1a120b; color: #e4b069; }
@@ -297,6 +302,16 @@ th { color: #6d6d6d; font-size: .61rem; letter-spacing: .08em; text-transform: u
 .cash-summary strong { color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 2.15rem; font-weight: 400; }
 .cash-summary .entry strong { color: #78d99a; }
 .cash-summary .exit strong, .cash-summary .negative strong { color: #ef8a8a; }
+.finance-filter-caption { margin: -10px 0 14px; color: #666; font-size: .66rem; }
+.finance-filter-caption strong { color: var(--gold); }
+.barber-finance-filter { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 9px; }
+.barber-finance-filter button { min-width: 0; display: grid; gap: 5px; padding: 14px; border: 1px solid #292929; border-radius: 12px; background: #0e0e0e; color: #777; text-align: left; }
+.barber-finance-filter button:hover, .barber-finance-filter button.active { border-color: #66532d; background: #1b170f; }
+.barber-finance-filter button.active { box-shadow: inset 0 0 0 1px rgba(213,179,106,.22); }
+.barber-finance-filter button.warning.active { border-color: #6a4228; background: #1d130d; }
+.barber-finance-filter span { overflow: hidden; color: #8b8b8b; font-size: .63rem; font-weight: 900; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.barber-finance-filter strong { color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 1.75rem; font-weight: 400; }
+.barber-finance-filter small { color: #585858; font-size: .57rem; }
 .finance-ledger { display: grid; gap: 8px; }
 .finance-ledger-row { display: grid; grid-template-columns: 78px minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 13px; border: 1px solid #252525; border-radius: 12px; background: #0e0e0e; }
 .finance-ledger-row > div { min-width: 0; display: grid; gap: 4px; }
@@ -320,14 +335,19 @@ th { color: #6d6d6d; font-size: .61rem; letter-spacing: .08em; text-transform: u
 .subscriber-card h3 { overflow: hidden; margin: 0; font-size: .84rem; text-overflow: ellipsis; white-space: nowrap; }
 .subscriber-card a { color: var(--gold); font-size: .68rem; }
 .subscriber-card small { color: #626262; font-size: .61rem; }
+.subscriber-plan { justify-self: start; margin: 2px 0; padding: 4px 7px; border-radius: 999px; background: rgba(213,179,106,.09); color: #c9a75f; font-size: .57rem; font-weight: 800; }
+.subscriber-plan.missing { background: rgba(239,139,95,.09); color: #e18a66; }
 .subscriber-payment-status { min-height: 46px; display: grid; align-content: center; gap: 4px; padding: 10px 12px; border: 1px solid #252525; border-radius: 10px; background: #0b0b0b; }
 .subscriber-payment-status > span { color: #777; font-size: .65rem; font-weight: 900; text-transform: uppercase; }
 .subscriber-payment-status > span.paid { color: #78d99a; }
 .subscriber-payment-status > span.pending { color: #ef9b76; }
 .subscriber-payment-status > span.inactive { color: #888; }
+.subscriber-payment-status > span.missing-plan { color: #e18a66; }
 .subscriber-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
 .pay-button { min-height: 34px; margin-left: auto; border: 1px solid rgba(66,201,122,.38); border-radius: 9px; background: rgba(66,201,122,.1); color: #83dda3; padding: 0 13px; font-size: .64rem; font-weight: 900; }
 .reopen-payment-button { margin-left: auto; }
+.subscriber-delete-button { min-height: 32px; border: 1px solid #493030; border-radius: 999px; background: #1c1010; color: #df7777; padding: 0 11px; font-size: .61rem; font-weight: 800; }
+.form-warning { margin: 0; color: #e18a66; font-size: .65rem; line-height: 1.45; }
 
 @media (min-width: 640px) {
   .hero-actions { flex-direction: row; }
@@ -368,7 +388,10 @@ th { color: #6d6d6d; font-size: .61rem; letter-spacing: .08em; text-transform: u
 
 @media (max-width: 639px) {
   .finance-section-heading { align-items: stretch; flex-direction: column; }
-  .finance-section-heading label { width: 100%; }
+  .finance-section-heading > label { width: 100%; }
+  .month-navigation { grid-template-columns: 1fr 1fr; }
+  .month-navigation label { grid-column: 1 / -1; grid-row: 1; }
+  .month-navigation button { width: 100%; }
   .subscriber-dashboard-summary { grid-template-columns: 1fr; }
   .subscriber-dashboard-summary.large { grid-template-columns: repeat(3, 1fr); }
   .finance-ledger-row { grid-template-columns: auto minmax(0, 1fr); }

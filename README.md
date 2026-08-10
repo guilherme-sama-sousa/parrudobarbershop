@@ -26,8 +26,8 @@ O banco impede dois agendamentos sobrepostos para o mesmo barbeiro (restrição 
 
 - Dashboard com agendamentos do dia, alertas de estoque, entradas, saídas, saldo e faturamento mensal por barbeiro.
 - Agenda diária com mudança de status.
-- **Financeiro**: lançamento manual de entradas e saídas com valor, data, descrição e barbeiro opcional, além do histórico mensal.
-- **Assinantes**: cadastro simplificado com nome e telefone, acompanhamento mensal, baixa de pagamento, reabertura e ativação/inativação.
+- **Financeiro**: lançamento e exclusão de entradas e saídas, separação do faturamento por barbeiro, filtro por profissional e navegação entre meses passados ou futuros.
+- **Assinantes**: cadastro com nome, telefone e plano previamente cadastrado, acompanhamento de meses passados ou futuros, baixa de pagamento, reabertura, edição, ativação/inativação e exclusão.
 - Barbeiros: cadastrar, editar, foto, especialidades, ativar/inativar.
 - Serviços: cadastrar, editar, preço, duração, ativar/inativar.
 - Bloqueios de agenda por barbeiro.
@@ -50,6 +50,7 @@ O banco impede dois agendamentos sobrepostos para o mesmo barbeiro (restrição 
 3. Execute `supabase/migrations/002_precos_e_planos.sql` — aplica a tabela de preços oficial nos serviços e cria os planos mensais. Em banco já existente desta implantação, execute SOMENTE o 002.
 4. Execute `supabase/migrations/003_area_cliente_e_fotos_estoque.sql` — cria o login do cliente, histórico/cancelamento seguro, foto dos produtos e o bucket de imagens.
 5. Execute `supabase/migrations/004_financeiro_e_assinantes.sql` — cria o fluxo de caixa, faturamento por barbeiro, assinantes e baixas mensais.
+6. Execute `supabase/migrations/005_planos_dos_assinantes.sql` — vincula cada assinante a um dos planos mensais previamente cadastrados.
 
 Em um banco já publicado, execute apenas as migrações ainda não aplicadas, na ordem numérica.
 
