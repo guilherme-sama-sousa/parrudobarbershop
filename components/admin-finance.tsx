@@ -47,7 +47,7 @@ function isSubscriberIncluded(subscriber: Subscriber, month: string) {
 }
 
 function FinanceMigrationNotice() {
-  return <div className="admin-panel finance-migration-notice"><strong>Financeiro ainda não habilitado.</strong><span>Execute as migrações 004 e 005 no Supabase.</span></div>
+  return <div className="admin-panel finance-migration-notice"><strong>Financeiro ainda não habilitado.</strong><span>Execute as migrações 004, 005 e 006 no Supabase.</span></div>
 }
 
 export function FinanceDashboardPanel({ cashTransactions, barbers, subscribers, subscriberPayments, financeReady }: FinanceDataProps) {
@@ -106,6 +106,7 @@ export function CashFlowView({ cashTransactions, barbers, financeReady, onSaved,
   const [month, setMonth] = useState(currentMonth())
   const [barberFilter, setBarberFilter] = useState('all')
   const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState('')
 
   const monthTransactions = cashTransactions.filter((item) => item.occurred_on.startsWith(month))
   const revenueByBarber = barbers
@@ -159,10 +160,19 @@ export function CashFlowView({ cashTransactions, barbers, financeReady, onSaved,
 
   const remove = async (transaction: CashTransaction) => {
     if (!window.confirm(`Excluir o lançamento "${transaction.description}"?`)) return
-    const supabase = getSupabaseBrowserClient()
-    const { error } = await supabase.from('cash_transactions').delete().eq('id', transaction.id)
-    if (error) return setError(error.message)
-    await onSaved()
+    setDeletingId(transaction.id)
+    setError('')
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const { error } = await supabase.from('cash_transactions').delete().eq('id', transaction.id)
+      if (error) throw error
+      await onSaved()
+    } catch (caught) {
+      const code = typeof caught === 'object' && caught && 'code' in caught ? String(caught.code) : ''
+      setError(code === '23503' ? 'Este lançamento foi gerado automaticamente. Exclua a venda no modal de Vendas ou reabra a mensalidade no menu Assinantes.' : getErrorMessage(caught, 'Não foi possível excluir o lançamento.'))
+    } finally {
+      setDeletingId('')
+    }
   }
 
   if (!financeReady) return <FinanceMigrationNotice />
@@ -173,7 +183,7 @@ export function CashFlowView({ cashTransactions, barbers, financeReady, onSaved,
       <section className="admin-panel"><div className="finance-section-heading compact"><div><span className="eyebrow">RESUMO DO CAIXA</span><h2>{monthLabel(month)}</h2></div><MonthNavigation value={month} onChange={setMonth} /></div><p className="finance-filter-caption">Exibindo: <strong>{selectedBarberLabel}</strong></p><div className="cash-summary"><div className="entry"><span>Entradas</span><strong>{currencyFormatter.format(entries)}</strong></div><div className="exit"><span>Saídas</span><strong>{currencyFormatter.format(exits)}</strong></div><div className={entries - exits < 0 ? 'balance negative' : 'balance'}><span>Saldo</span><strong>{currencyFormatter.format(entries - exits)}</strong></div></div></section>
     </div>
     <section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">FATURAMENTO POR BARBEIRO</span><h2>Separação de {monthLabel(month)}</h2></div></div><p className="panel-description">Escolha um profissional para filtrar os totais e o histórico de movimentações.</p><div className="barber-finance-filter"><button type="button" className={barberFilter === 'all' ? 'active' : ''} onClick={() => setBarberFilter('all')}><span>Todos</span><strong>{currencyFormatter.format(monthTransactions.filter((item) => item.movement_type === 'entry').reduce((sum, item) => sum + Number(item.amount), 0))}</strong><small>faturamento total</small></button>{revenueByBarber.map((barber) => <button type="button" className={barberFilter === barber.id ? 'active' : ''} key={barber.id} onClick={() => setBarberFilter(barber.id)}><span>{barber.name}</span><strong>{currencyFormatter.format(barber.total)}</strong><small>entradas vinculadas</small></button>)}<button type="button" className={barberFilter === 'unassigned' ? 'active warning' : 'warning'} onClick={() => setBarberFilter('unassigned')}><span>Sem barbeiro</span><strong>{currencyFormatter.format(unassignedRevenue)}</strong><small>entradas não vinculadas</small></button></div></section>
-    <section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">MOVIMENTAÇÕES</span><h2>{selectedBarberLabel} • {monthLabel(month)}</h2></div></div><div className="finance-ledger">{filteredTransactions.map((item) => <div className="finance-ledger-row" key={item.id}><span className={item.movement_type === 'entry' ? 'movement-badge entry' : 'movement-badge exit'}>{item.movement_type === 'entry' ? 'Entrada' : 'Saída'}</span><div><strong>{item.description}</strong><small>{bahiaDateFormatter.format(new Date(`${item.occurred_on}T12:00:00-03:00`))}{item.barbers?.name ? ` • ${item.barbers.name}` : ' • Sem barbeiro'}</small></div><strong className={item.movement_type === 'entry' ? 'money-entry' : 'money-exit'}>{item.movement_type === 'entry' ? '+' : '−'} {currencyFormatter.format(Number(item.amount))}</strong><button type="button" className="finance-delete-button" onClick={() => void remove(item)}>Excluir</button></div>)}{!filteredTransactions.length && <EmptyFinanceState text="Nenhum lançamento para este filtro e mês." />}</div></section>
+    <section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">MOVIMENTAÇÕES</span><h2>{selectedBarberLabel} • {monthLabel(month)}</h2></div></div><div className="finance-ledger">{filteredTransactions.map((item) => <div className="finance-ledger-row" key={item.id}><span className={item.movement_type === 'entry' ? 'movement-badge entry' : 'movement-badge exit'}>{item.movement_type === 'entry' ? 'Entrada' : 'Saída'}</span><div><strong>{item.description}</strong><small>{bahiaDateFormatter.format(new Date(`${item.occurred_on}T12:00:00-03:00`))}{item.barbers?.name ? ` • ${item.barbers.name}` : ' • Sem barbeiro'}</small></div><strong className={item.movement_type === 'entry' ? 'money-entry' : 'money-exit'}>{item.movement_type === 'entry' ? '+' : '−'} {currencyFormatter.format(Number(item.amount))}</strong><button type="button" className="finance-delete-button" onClick={() => void remove(item)} disabled={deletingId === item.id}>{deletingId === item.id ? 'Excluindo...' : 'Excluir'}</button></div>)}{!filteredTransactions.length && <EmptyFinanceState text="Nenhum lançamento para este filtro e mês." />}</div></section>
   </div>
 }
 
@@ -181,22 +191,25 @@ interface SubscribersViewProps {
   subscribers: Subscriber[]
   subscriberPayments: SubscriberPayment[]
   plans: Plan[]
+  barbers: Barber[]
   financeReady: boolean
   onSaved: () => Promise<void>
   setError: (value: string) => void
 }
 
-export function SubscribersView({ subscribers, subscriberPayments, plans, financeReady, onSaved, setError }: SubscribersViewProps) {
+export function SubscribersView({ subscribers, subscriberPayments, plans, barbers, financeReady, onSaved, setError }: SubscribersViewProps) {
   const [editingId, setEditingId] = useState('')
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [planId, setPlanId] = useState('')
+  const [barberId, setBarberId] = useState('')
   const [month, setMonth] = useState(currentMonth())
   const [search, setSearch] = useState('')
   const [saving, setSaving] = useState(false)
+  const [paymentActionId, setPaymentActionId] = useState('')
 
-  const reset = () => { setEditingId(''); setFullName(''); setPhone(''); setPlanId('') }
-  const edit = (subscriber: Subscriber) => { setEditingId(subscriber.id); setFullName(subscriber.full_name); setPhone(maskPhone(subscriber.phone)); setPlanId(subscriber.plan_id || ''); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  const reset = () => { setEditingId(''); setFullName(''); setPhone(''); setPlanId(''); setBarberId('') }
+  const edit = (subscriber: Subscriber) => { setEditingId(subscriber.id); setFullName(subscriber.full_name); setPhone(maskPhone(subscriber.phone)); setPlanId(subscriber.plan_id || ''); setBarberId(subscriber.barber_id || ''); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const normalizedSearch = search.trim().toLocaleLowerCase('pt-BR')
   const searchPhone = normalizePhone(search)
   const visibleSubscribers = subscribers.filter((subscriber) => {
@@ -214,11 +227,12 @@ export function SubscribersView({ subscribers, subscriberPayments, plans, financ
     if (fullName.trim().length < 3) return setError('Informe o nome do assinante.')
     if (cleanPhone.length < 10 || cleanPhone.length > 13) return setError('Informe um telefone válido com DDD.')
     if (!planId) return setError('Selecione o plano mensal do assinante.')
+    if (!barberId) return setError('Selecione o barbeiro responsável pelo assinante.')
     setSaving(true)
     setError('')
     try {
       const supabase = getSupabaseBrowserClient()
-      const payload = { full_name: fullName.trim(), phone: cleanPhone, plan_id: planId }
+      const payload = { full_name: fullName.trim(), phone: cleanPhone, plan_id: planId, barber_id: barberId }
       const query = editingId ? supabase.from('subscribers').update(payload).eq('id', editingId) : supabase.from('subscribers').insert(payload)
       const { error } = await query
       if (error) throw error
@@ -240,7 +254,7 @@ export function SubscribersView({ subscribers, subscriberPayments, plans, financ
   }
 
   const removeSubscriber = async (subscriber: Subscriber) => {
-    if (!window.confirm(`Excluir permanentemente ${subscriber.full_name} e todo o histórico de pagamentos?`)) return
+    if (!window.confirm(`Excluir permanentemente ${subscriber.full_name} e o histórico de pagamentos? As entradas já registradas no caixa serão preservadas.`)) return
     const supabase = getSupabaseBrowserClient()
     const { error } = await supabase.from('subscribers').delete().eq('id', subscriber.id)
     if (error) return setError(error.message)
@@ -251,25 +265,42 @@ export function SubscribersView({ subscribers, subscriberPayments, plans, financ
   const markPaid = async (subscriber: Subscriber) => {
     if (!/^\d{4}-\d{2}$/.test(month)) return setError('Selecione o mês do pagamento.')
     if (!subscriber.plan_id) return setError('Edite o assinante e selecione um plano antes de dar baixa.')
-    const supabase = getSupabaseBrowserClient()
-    const { error } = await supabase.from('subscriber_payments').insert({ subscriber_id: subscriber.id, reference_month: `${month}-01` })
-    if (error) return setError(error.message)
-    await onSaved()
+    if (!subscriber.barber_id) return setError('Edite o assinante e selecione o barbeiro responsável antes de dar baixa.')
+    setPaymentActionId(subscriber.id)
+    setError('')
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const { error } = await supabase.rpc('mark_subscriber_payment', { p_subscriber_id: subscriber.id, p_reference_month: `${month}-01`, p_paid_on: toLocalDateInput() })
+      if (error) throw error
+      await onSaved()
+    } catch (caught) {
+      setError(getErrorMessage(caught, 'Não foi possível dar baixa na mensalidade.'))
+    } finally {
+      setPaymentActionId('')
+    }
   }
 
   const reopenMonth = async (payment: SubscriberPayment) => {
-    if (!window.confirm('Reabrir este pagamento e voltar o mês para pendente?')) return
-    const supabase = getSupabaseBrowserClient()
-    const { error } = await supabase.from('subscriber_payments').delete().eq('id', payment.id)
-    if (error) return setError(error.message)
-    await onSaved()
+    if (!window.confirm('Reabrir este pagamento? A entrada automática também será removida do caixa.')) return
+    setPaymentActionId(payment.subscriber_id)
+    setError('')
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const { error } = await supabase.rpc('reopen_subscriber_payment', { p_payment_id: payment.id })
+      if (error) throw error
+      await onSaved()
+    } catch (caught) {
+      setError(getErrorMessage(caught, 'Não foi possível reabrir a mensalidade.'))
+    } finally {
+      setPaymentActionId('')
+    }
   }
 
   if (!financeReady) return <FinanceMigrationNotice />
 
   return <div className="admin-stack">
-    <div className="admin-two-columns subscriber-top-layout"><form className="admin-panel admin-form" onSubmit={submit}><div className="panel-heading"><div><span className="eyebrow">{editingId ? 'EDITAR ASSINANTE' : 'NOVO ASSINANTE'}</span><h2>{editingId ? 'Atualizar cadastro' : 'Adicionar mensalista'}</h2></div>{editingId && <button type="button" className="text-button" onClick={reset}>Cancelar edição</button>}</div><label>Nome<input value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Nome do assinante" minLength={3} required /></label><label>Telefone / WhatsApp<input value={phone} onChange={(event) => setPhone(maskPhone(event.target.value))} placeholder="(71) 99999-9999" required /></label><label>Plano mensal<select value={planId} onChange={(event) => setPlanId(event.target.value)} required><option value="">Selecione um plano</option>{plans.filter((plan) => plan.active || plan.id === planId).map((plan) => <option key={plan.id} value={plan.id}>{plan.name} — {currencyFormatter.format(Number(plan.price))}/mês</option>)}</select><small>Os planos são cadastrados e editados no menu Planos.</small></label><button className="button button-gold" type="submit" disabled={saving || !plans.length}>{saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Adicionar assinante'}</button>{!plans.length && <p className="form-warning">Nenhum plano disponível. Cadastre ou ative um plano primeiro.</p>}</form><section className="admin-panel"><div className="finance-section-heading compact"><div><span className="eyebrow">PAGAMENTOS</span><h2>{monthLabel(month)}</h2></div><MonthNavigation value={month} onChange={setMonth} /></div><div className="subscriber-dashboard-summary large"><div><strong>{eligibleSubscribers.length}</strong><span>ativos</span></div><div className="paid"><strong>{paidCount}</strong><span>pagos</span></div><div className={eligibleSubscribers.length - paidCount ? 'pending' : ''}><strong>{eligibleSubscribers.length - paidCount}</strong><span>pendentes</span></div></div><p className="panel-description">Use Anterior e Próximo para consultar inclusive meses futuros. A baixa controla o pagamento mensal; o caixa continua no menu Financeiro.</p></section></div>
-    <section className="admin-panel"><div className="panel-heading subscriber-list-heading"><div><span className="eyebrow">ACOMPANHAMENTO</span><h2>Assinantes mensais</h2></div><input className="subscriber-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar nome ou telefone" /></div><div className="subscriber-grid">{visibleSubscribers.map((subscriber) => { const payment = paymentBySubscriber.get(subscriber.id); const notStarted = !isSubscriberIncluded(subscriber, month); return <article className={!subscriber.active ? 'subscriber-card inactive' : 'subscriber-card'} key={subscriber.id}><div className="subscriber-card-main"><div className="subscriber-avatar">{subscriber.full_name.charAt(0).toUpperCase()}</div><div><h3>{subscriber.full_name}</h3><a href={`https://wa.me/55${subscriber.phone}`} target="_blank" rel="noreferrer">{maskPhone(subscriber.phone)}</a><span className={subscriber.plans ? 'subscriber-plan' : 'subscriber-plan missing'}>{subscriber.plans ? `${subscriber.plans.name} • ${currencyFormatter.format(Number(subscriber.plans.price))}/mês` : 'Plano não definido'}</span><small>Desde {bahiaDateFormatter.format(new Date(`${subscriber.started_on}T12:00:00-03:00`))}</small></div></div><div className="subscriber-payment-status">{!subscriber.active ? <span className="inactive">Inativo</span> : notStarted ? <span>Ainda não assinava</span> : payment ? <><span className="paid">Pago</span><small>Baixa em {bahiaDateTimeFormatter.format(new Date(payment.paid_at))}</small></> : !subscriber.plan_id ? <span className="missing-plan">Selecione um plano</span> : <span className="pending">Pagamento pendente</span>}</div><div className="subscriber-actions"><button type="button" className="edit-button" onClick={() => edit(subscriber)}>Editar</button><button type="button" className={subscriber.active ? 'toggle active' : 'toggle'} onClick={() => void toggle(subscriber)}>{subscriber.active ? 'Ativo' : 'Inativo'}</button><button type="button" className="subscriber-delete-button" onClick={() => void removeSubscriber(subscriber)}>Excluir</button>{subscriber.active && !notStarted && (payment ? <button type="button" className="reopen-payment-button" onClick={() => void reopenMonth(payment)}>Reabrir mês</button> : subscriber.plan_id ? <button type="button" className="pay-button" onClick={() => void markPaid(subscriber)}>Dar baixa</button> : null)}</div></article>})}{!visibleSubscribers.length && <EmptyFinanceState text="Nenhum assinante encontrado." />}</div></section>
+    <div className="admin-two-columns subscriber-top-layout"><form className="admin-panel admin-form" onSubmit={submit}><div className="panel-heading"><div><span className="eyebrow">{editingId ? 'EDITAR ASSINANTE' : 'NOVO ASSINANTE'}</span><h2>{editingId ? 'Atualizar cadastro' : 'Adicionar mensalista'}</h2></div>{editingId && <button type="button" className="text-button" onClick={reset}>Cancelar edição</button>}</div><label>Nome<input value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Nome do assinante" minLength={3} required /></label><label>Telefone / WhatsApp<input value={phone} onChange={(event) => setPhone(maskPhone(event.target.value))} placeholder="(71) 99999-9999" required /></label><label>Plano mensal<select value={planId} onChange={(event) => setPlanId(event.target.value)} required><option value="">Selecione um plano</option>{plans.filter((plan) => plan.active || plan.id === planId).map((plan) => <option key={plan.id} value={plan.id}>{plan.name} — {currencyFormatter.format(Number(plan.price))}/mês</option>)}</select><small>Os planos são cadastrados e editados no menu Planos.</small></label><label>Barbeiro responsável<select value={barberId} onChange={(event) => setBarberId(event.target.value)} required><option value="">Selecione um barbeiro</option>{barbers.filter((barber) => barber.active || barber.id === barberId).map((barber) => <option key={barber.id} value={barber.id}>{barber.name}{barber.active ? '' : ' (inativo)'}</option>)}</select><small>A mensalidade será lançada no faturamento deste barbeiro.</small></label><button className="button button-gold" type="submit" disabled={saving || !plans.length || !barbers.some((barber) => barber.active)}>{saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Adicionar assinante'}</button>{!plans.length && <p className="form-warning">Nenhum plano disponível. Cadastre ou ative um plano primeiro.</p>}{!barbers.some((barber) => barber.active) && <p className="form-warning">Nenhum barbeiro ativo. Cadastre ou ative um profissional primeiro.</p>}</form><section className="admin-panel"><div className="finance-section-heading compact"><div><span className="eyebrow">PAGAMENTOS</span><h2>{monthLabel(month)}</h2></div><MonthNavigation value={month} onChange={setMonth} /></div><div className="subscriber-dashboard-summary large"><div><strong>{eligibleSubscribers.length}</strong><span>ativos</span></div><div className="paid"><strong>{paidCount}</strong><span>pagos</span></div><div className={eligibleSubscribers.length - paidCount ? 'pending' : ''}><strong>{eligibleSubscribers.length - paidCount}</strong><span>pendentes</span></div></div><p className="panel-description">Use Anterior e Próximo para consultar inclusive meses futuros. Ao dar baixa, o valor do plano entra automaticamente no Financeiro e no faturamento do barbeiro responsável. Reabrir o mês remove essa entrada.</p></section></div>
+    <section className="admin-panel"><div className="panel-heading subscriber-list-heading"><div><span className="eyebrow">ACOMPANHAMENTO</span><h2>Assinantes mensais</h2></div><input className="subscriber-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar nome ou telefone" aria-label="Buscar assinante por nome ou telefone" /></div><div className="subscriber-grid">{visibleSubscribers.map((subscriber) => { const payment = paymentBySubscriber.get(subscriber.id); const notStarted = !isSubscriberIncluded(subscriber, month); const paymentBusy = paymentActionId === subscriber.id; return <article className={!subscriber.active ? 'subscriber-card inactive' : 'subscriber-card'} key={subscriber.id}><div className="subscriber-card-main"><div className="subscriber-avatar">{subscriber.full_name.charAt(0).toUpperCase()}</div><div><h3>{subscriber.full_name}</h3><a href={`https://wa.me/55${subscriber.phone}`} target="_blank" rel="noreferrer">{maskPhone(subscriber.phone)}</a><span className={subscriber.plans ? 'subscriber-plan' : 'subscriber-plan missing'}>{subscriber.plans ? `${subscriber.plans.name} • ${currencyFormatter.format(Number(subscriber.plans.price))}/mês` : 'Plano não definido'}</span><span className={subscriber.barbers ? 'subscriber-barber' : 'subscriber-barber missing'}>{subscriber.barbers ? `Barbeiro: ${subscriber.barbers.name}` : 'Barbeiro não definido'}</span><small>Desde {bahiaDateFormatter.format(new Date(`${subscriber.started_on}T12:00:00-03:00`))}</small></div></div><div className="subscriber-payment-status">{!subscriber.active ? <span className="inactive">Inativo</span> : notStarted ? <span>Ainda não assinava</span> : payment ? <><span className="paid">Pago</span><small>{currencyFormatter.format(Number(payment.amount || subscriber.plans?.price || 0))} • baixa em {bahiaDateTimeFormatter.format(new Date(payment.paid_at))}</small></> : !subscriber.plan_id ? <span className="missing-plan">Selecione um plano</span> : !subscriber.barber_id ? <span className="missing-plan">Selecione o barbeiro</span> : <span className="pending">Pagamento pendente</span>}</div><div className="subscriber-actions"><button type="button" className="edit-button" onClick={() => edit(subscriber)}>Editar</button><button type="button" className={subscriber.active ? 'toggle active' : 'toggle'} onClick={() => void toggle(subscriber)}>{subscriber.active ? 'Ativo' : 'Inativo'}</button><button type="button" className="subscriber-delete-button" onClick={() => void removeSubscriber(subscriber)}>Excluir</button>{subscriber.active && !notStarted && (payment ? <button type="button" className="reopen-payment-button" onClick={() => void reopenMonth(payment)} disabled={paymentBusy}>{paymentBusy ? 'Reabrindo...' : 'Reabrir mês'}</button> : subscriber.plan_id && subscriber.barber_id ? <button type="button" className="pay-button" onClick={() => void markPaid(subscriber)} disabled={paymentBusy}>{paymentBusy ? 'Dando baixa...' : 'Dar baixa'}</button> : null)}</div></article>})}{!visibleSubscribers.length && <EmptyFinanceState text="Nenhum assinante encontrado." />}</div></section>
   </div>
 }
 
