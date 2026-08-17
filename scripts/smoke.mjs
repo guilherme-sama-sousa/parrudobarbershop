@@ -11,12 +11,14 @@ const required = [
   'components/booking-flow.tsx',
   'components/admin-dashboard.tsx',
   'components/admin-finance.tsx',
+  'components/sales-modal.tsx',
   'app/api/admin/users/route.ts',
   'app/api/admin/bootstrap/route.ts',
   'supabase/migrations/001_init.sql',
   'supabase/migrations/003_area_cliente_e_fotos_estoque.sql',
   'supabase/migrations/004_financeiro_e_assinantes.sql',
   'supabase/migrations/005_planos_dos_assinantes.sql',
+  'supabase/migrations/006_vendas_e_baixas_automaticas.sql',
   '.env.example',
 ]
 
@@ -37,6 +39,7 @@ const sql = await readFile(join(root, 'supabase/migrations/001_init.sql'), 'utf8
 const clientSql = await readFile(join(root, 'supabase/migrations/003_area_cliente_e_fotos_estoque.sql'), 'utf8')
 const financeSql = await readFile(join(root, 'supabase/migrations/004_financeiro_e_assinantes.sql'), 'utf8')
 const subscriberPlansSql = await readFile(join(root, 'supabase/migrations/005_planos_dos_assinantes.sql'), 'utf8')
+const salesSql = await readFile(join(root, 'supabase/migrations/006_vendas_e_baixas_automaticas.sql'), 'utf8')
 assert.match(sql, /enable row level security/i)
 assert.match(sql, /appointments_no_overlap/i)
 assert.match(sql, /create_appointment/i)
@@ -56,6 +59,14 @@ assert.match(financeSql, /enable row level security/i)
 assert.match(subscriberPlansSql, /add column if not exists plan_id/i)
 assert.match(subscriberPlansSql, /references public\.plans\(id\)/i)
 assert.match(subscriberPlansSql, /subscribers_plan_id_idx/i)
+assert.match(salesSql, /add column if not exists sale_price/i)
+assert.match(salesSql, /create table if not exists public\.product_sales/i)
+assert.match(salesSql, /create or replace function public\.record_product_sale/i)
+assert.match(salesSql, /create or replace function public\.delete_product_sale/i)
+assert.match(salesSql, /create or replace function public\.mark_subscriber_payment/i)
+assert.match(salesSql, /create or replace function public\.reopen_subscriber_payment/i)
+assert.match(salesSql, /public\.is_admin\(\)/i)
+assert.match(salesSql, /Estoque insuficiente/i)
 
 const login = await readFile(join(root, 'app/admin/login/page.tsx'), 'utf8')
 assert.match(login, /signInWithPassword/)

@@ -83,6 +83,7 @@ export interface StockBalance {
   unit: string
   minimum_stock: number
   current_stock: number
+  sale_price: number
   photo_url: string | null
   active: boolean
 }
@@ -123,11 +124,13 @@ export interface Subscriber {
   full_name: string
   phone: string
   plan_id: string | null
+  barber_id: string | null
   active: boolean
   started_on: string
   created_at: string
   updated_at: string
   plans: { id: string; name: string; price: number; active: boolean } | null
+  barbers: { id: string; name: string; active: boolean } | null
 }
 
 export interface SubscriberPayment {
@@ -136,4 +139,21 @@ export interface SubscriberPayment {
   reference_month: string
   paid_at: string
   created_at: string
+  cash_transaction_id: string | null
+  amount: number | null
+  barber_id: string | null
+  plan_id: string | null
+}
+
+export interface ProductSale {
+  id: string
+  product_id: string
+  barber_id: string
+  quantity: number
+  unit_price: number
+  total_amount: number
+  sold_on: string
+  created_at: string
+  stock_products: { name: string } | null
+  barbers: { name: string } | null
 }

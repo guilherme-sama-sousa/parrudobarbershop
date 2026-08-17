@@ -4,10 +4,11 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CashFlowView, FinanceDashboardPanel, SubscribersView } from '@/components/admin-finance'
 import { Logo } from '@/components/logo'
+import { SalesModal } from '@/components/sales-modal'
 import { bahiaDateTimeFormatter, currencyFormatter, toLocalDateInput } from '@/lib/format'
 import { getErrorMessage } from '@/lib/error-message'
 import { getSupabaseBrowserClient, isSupabaseConfigured } from '@/lib/supabase/client'
-import type { AdminUser, Appointment, AppointmentStatus, Barber, BlockedTime, BusinessHour, CashTransaction, Plan, Service, SiteSettings, StockBalance, Subscriber, SubscriberPayment } from '@/lib/types'
+import type { AdminUser, Appointment, AppointmentStatus, Barber, BlockedTime, BusinessHour, CashTransaction, Plan, ProductSale, Service, SiteSettings, StockBalance, Subscriber, SubscriberPayment } from '@/lib/types'
 
 type Tab = 'dashboard' | 'agenda' | 'finance' | 'subscribers' | 'barbers' | 'services' | 'plans' | 'blocks' | 'hours' | 'stock' | 'admins' | 'settings'
 
@@ -52,6 +53,7 @@ export function AdminDashboard() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [loadFailed, setLoadFailed] = useState(false)
   const [notice, setNotice] = useState('')
   const [profileName, setProfileName] = useState('Administrador')
   const [settings, setSettings] = useState<SiteSettings>(initialSettings)
@@ -66,9 +68,13 @@ export function AdminDashboard() {
   const [subscribers, setSubscribers] = useState<Subscriber[]>([])
   const [subscriberPayments, setSubscriberPayments] = useState<SubscriberPayment[]>([])
   const [financeReady, setFinanceReady] = useState(true)
+  const [productSales, setProductSales] = useState<ProductSale[]>([])
+  const [salesReady, setSalesReady] = useState(true)
+  const [saleModalOpen, setSaleModalOpen] = useState(false)
   const [agendaDate, setAgendaDate] = useState(toLocalDateInput())
 
   const flash = (message: string) => {
+    setError('')
     setNotice(message)
     window.setTimeout(() => setNotice(''), 2600)
   }
@@ -84,13 +90,14 @@ export function AdminDashboard() {
       const { data: sessionData } = await supabase.auth.getSession()
       setLoading(true)
       setError('')
+      setLoadFailed(false)
       if (!sessionData.session) {
         router.replace('/admin/login')
         return
       }
 
       const userId = sessionData.session.user.id
-      const [profileResult, settingsResult, servicesResult, barbersResult, appointmentsResult, blocksResult, stockResult, hoursResult, plansResult, cashResult, subscribersResult, subscriberPaymentsResult] = await Promise.all([
+      const [profileResult, settingsResult, servicesResult, barbersResult, appointmentsResult, blocksResult, stockResult, hoursResult, plansResult, cashResult, subscribersResult, subscriberPaymentsResult, productSalesResult] = await Promise.all([
         supabase.from('profiles').select('full_name, role').eq('id', userId).single(),
         supabase.from('site_settings').select('*').eq('id', 1).single(),
         supabase.from('services').select('*').order('name'),
@@ -101,8 +108,9 @@ export function AdminDashboard() {
         supabase.from('business_hours').select('*').order('day_of_week'),
         supabase.from('plans').select('*').order('sort_order'),
         supabase.from('cash_transactions').select('id, movement_type, amount, description, barber_id, occurred_on, created_at, barbers(name)').order('occurred_on', { ascending: false }).order('created_at', { ascending: false }).limit(1000),
-        supabase.from('subscribers').select('*, plans(id, name, price, active)').order('full_name'),
-        supabase.from('subscriber_payments').select('id, subscriber_id, reference_month, paid_at, created_at').order('reference_month', { ascending: false }).limit(2000),
+        supabase.from('subscribers').select('*, plans(id, name, price, active), barbers(id, name, active)').order('full_name'),
+        supabase.from('subscriber_payments').select('id, subscriber_id, reference_month, paid_at, created_at, cash_transaction_id, amount, barber_id, plan_id').order('reference_month', { ascending: false }).limit(2000),
+        supabase.from('product_sales').select('id, product_id, barber_id, quantity, unit_price, total_amount, sold_on, created_at, stock_products(name), barbers(name)').order('sold_on', { ascending: false }).order('created_at', { ascending: false }).limit(100),
       ])
 
       if (profileResult.error) throw new Error('Usuário sem perfil administrativo. Verifique a etapa de criação do primeiro admin no README.')
@@ -128,7 +136,10 @@ export function AdminDashboard() {
       setCashTransactions(financeIsReady ? ((cashResult.data ?? []) as unknown as CashTransaction[]) : [])
       setSubscribers(financeIsReady ? ((subscribersResult.data ?? []) as unknown as Subscriber[]) : [])
       setSubscriberPayments(financeIsReady ? ((subscriberPaymentsResult.data ?? []) as SubscriberPayment[]) : [])
+      setSalesReady(!productSalesResult.error)
+      setProductSales(productSalesResult.error ? [] : ((productSalesResult.data ?? []) as unknown as ProductSale[]))
     } catch (caught) {
+      setLoadFailed(true)
       setError(getErrorMessage(caught, 'Falha ao carregar o painel.'))
     } finally {
       setLoading(false)
@@ -164,36 +175,37 @@ export function AdminDashboard() {
       <aside className={menuOpen ? 'admin-sidebar open' : 'admin-sidebar'}>
         <div className="sidebar-brand"><Logo compact /></div>
         <nav>
-          {(Object.keys(tabLabels) as Tab[]).map((item) => <button key={item} className={tab === item ? 'active' : ''} onClick={() => openTab(item)}><span>{tabIcon(item)}</span>{tabLabels[item]}</button>)}
+          {(Object.keys(tabLabels) as Tab[]).map((item) => <button type="button" key={item} className={tab === item ? 'active' : ''} aria-current={tab === item ? 'page' : undefined} onClick={() => openTab(item)}><span aria-hidden="true">{tabIcon(item)}</span>{tabLabels[item]}</button>)}
         </nav>
         <div className="sidebar-user"><span>{profileName.charAt(0).toUpperCase()}</span><div><strong>{profileName}</strong><small>Administrador</small></div></div>
-        <button className="sidebar-signout" onClick={() => void signOut()}>Sair do painel</button>
+        <button type="button" className="sidebar-signout" onClick={() => void signOut()}>Sair do painel</button>
       </aside>
       {menuOpen && <button className="sidebar-backdrop" aria-label="Fechar menu" onClick={() => setMenuOpen(false)} />}
 
       <section className="admin-content">
         <header className="admin-topbar">
-          <button className="mobile-menu" onClick={() => setMenuOpen(true)}>☰</button>
+          <button type="button" className="mobile-menu" aria-label="Abrir menu do painel" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}>☰</button>
           <div><span className="eyebrow">PARRUDO ADMIN</span><h1>{tabLabels[tab]}</h1></div>
-          <div className="topbar-actions"><a className="button button-outline button-small" href="/" target="_blank">Ver site</a><button className="button button-dark button-small" onClick={() => void loadAll()}>Atualizar</button></div>
+          <div className="topbar-actions"><button type="button" className="button button-gold button-small sale-shortcut" onClick={() => setSaleModalOpen(true)}>＋ Venda</button><a className="button button-outline button-small" href="/" target="_blank" rel="noreferrer">Ver site</a><button type="button" className="button button-dark button-small" onClick={() => void loadAll()}>Atualizar</button></div>
         </header>
 
-        {error && <div className="admin-error"><strong>Não foi possível abrir o painel.</strong><span>{error}</span><button onClick={() => void loadAll()}>Tentar novamente</button></div>}
-        {notice && <div className="admin-notice">✓ {notice}</div>}
+        {error && <div className="admin-error" role="alert"><strong>{loadFailed ? 'Não foi possível abrir o painel.' : 'Não foi possível concluir a operação.'}</strong><span>{error}</span>{loadFailed && <button type="button" onClick={() => void loadAll()}>Tentar novamente</button>}</div>}
+        {notice && <div className="admin-notice" role="status" aria-live="polite">✓ {notice}</div>}
 
-        {!error && tab === 'dashboard' && <DashboardView appointments={appointments} upcoming={upcoming} barbers={barbers} services={services} revenue={completedRevenue} lowStock={lowStock} cashTransactions={cashTransactions} subscribers={subscribers} subscriberPayments={subscriberPayments} financeReady={financeReady} />}
-        {!error && tab === 'agenda' && <AgendaView appointments={todayAppointments} date={agendaDate} setDate={setAgendaDate} onStatus={async (id, status) => { const supabase = getSupabaseBrowserClient(); const { error: updateError } = await supabase.from('appointments').update({ status }).eq('id', id); if (updateError) return setError(updateError.message); flash('Status atualizado.'); await loadAll() }} />}
-        {!error && tab === 'finance' && <CashFlowView cashTransactions={cashTransactions} barbers={barbers} financeReady={financeReady} onSaved={async () => { flash('Lançamento atualizado.'); await loadAll() }} setError={setError} />}
-        {!error && tab === 'subscribers' && <SubscribersView subscribers={subscribers} subscriberPayments={subscriberPayments} plans={plans} financeReady={financeReady} onSaved={async () => { flash('Assinantes atualizados.'); await loadAll() }} setError={setError} />}
-        {!error && tab === 'barbers' && <BarbersView barbers={barbers} onSaved={async () => { flash('Barbeiro salvo.'); await loadAll() }} setError={setError} />}
-        {!error && tab === 'services' && <ServicesView services={services} onSaved={async () => { flash('Serviço salvo.'); await loadAll() }} setError={setError} />}
-        {!error && tab === 'plans' && <PlansView plans={plans} onSaved={async () => { flash('Plano salvo.'); await loadAll() }} setError={setError} />}
-        {!error && tab === 'blocks' && <BlocksView blocks={blocks} barbers={barbers} onSaved={async () => { flash('Bloqueio atualizado.'); await loadAll() }} setError={setError} />}
-        {!error && tab === 'stock' && <StockView stock={stock} onSaved={async () => { flash('Estoque atualizado.'); await loadAll() }} setError={setError} />}
-        {!error && tab === 'hours' && <HoursView hours={hours} onSaved={async () => { flash('Horários atualizados.'); await loadAll() }} setError={setError} />}
-        {!error && tab === 'admins' && <AdminsView setError={setError} onSaved={() => flash('Administrador criado.')} />}
-        {!error && tab === 'settings' && <SettingsView settings={settings} setSettings={setSettings} onSaved={() => flash('Configurações salvas.')} setError={setError} />}
+        {!loadFailed && tab === 'dashboard' && <DashboardView appointments={appointments} upcoming={upcoming} barbers={barbers} services={services} revenue={completedRevenue} lowStock={lowStock} cashTransactions={cashTransactions} subscribers={subscribers} subscriberPayments={subscriberPayments} financeReady={financeReady} />}
+        {!loadFailed && tab === 'agenda' && <AgendaView appointments={todayAppointments} date={agendaDate} setDate={setAgendaDate} onStatus={async (id, status) => { const supabase = getSupabaseBrowserClient(); const { error: updateError } = await supabase.from('appointments').update({ status }).eq('id', id); if (updateError) return setError(updateError.message); flash('Status atualizado.'); await loadAll() }} />}
+        {!loadFailed && tab === 'finance' && <CashFlowView cashTransactions={cashTransactions} barbers={barbers} financeReady={financeReady} onSaved={async () => { flash('Lançamento atualizado.'); await loadAll() }} setError={setError} />}
+        {!loadFailed && tab === 'subscribers' && <SubscribersView subscribers={subscribers} subscriberPayments={subscriberPayments} plans={plans} barbers={barbers} financeReady={financeReady} onSaved={async () => { flash('Assinantes atualizados e caixa sincronizado.'); await loadAll() }} setError={setError} />}
+        {!loadFailed && tab === 'barbers' && <BarbersView barbers={barbers} onSaved={async () => { flash('Barbeiro salvo.'); await loadAll() }} setError={setError} />}
+        {!loadFailed && tab === 'services' && <ServicesView services={services} onSaved={async () => { flash('Serviço salvo.'); await loadAll() }} setError={setError} />}
+        {!loadFailed && tab === 'plans' && <PlansView plans={plans} onSaved={async () => { flash('Plano salvo.'); await loadAll() }} setError={setError} />}
+        {!loadFailed && tab === 'blocks' && <BlocksView blocks={blocks} barbers={barbers} onSaved={async () => { flash('Bloqueio atualizado.'); await loadAll() }} setError={setError} />}
+        {!loadFailed && tab === 'stock' && <StockView stock={stock} onSaved={async () => { flash('Estoque atualizado.'); await loadAll() }} setError={setError} />}
+        {!loadFailed && tab === 'hours' && <HoursView hours={hours} onSaved={async () => { flash('Horários atualizados.'); await loadAll() }} setError={setError} />}
+        {!loadFailed && tab === 'admins' && <AdminsView setError={setError} onSaved={() => flash('Administrador criado.')} />}
+        {!loadFailed && tab === 'settings' && <SettingsView settings={settings} setSettings={setSettings} onSaved={() => flash('Configurações salvas.')} setError={setError} />}
       </section>
+      {saleModalOpen && <SalesModal stock={stock} barbers={barbers} sales={productSales} salesReady={salesReady} onClose={() => setSaleModalOpen(false)} onSaved={async () => { flash('Venda atualizada; estoque e caixa sincronizados.'); await loadAll() }} setError={setError} />}
     </main>
   )
 }
@@ -284,6 +296,7 @@ function StockView({ stock, onSaved, setError }: { stock: StockBalance[]; onSave
   const [category, setCategory] = useState('Bebida')
   const [unit, setUnit] = useState('un')
   const [minimum, setMinimum] = useState('5')
+  const [price, setPrice] = useState('0.00')
   const [photoUrl, setPhotoUrl] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState('')
@@ -292,6 +305,7 @@ function StockView({ stock, onSaved, setError }: { stock: StockBalance[]; onSave
   const [movementType, setMovementType] = useState<'entry' | 'exit'>('entry')
   const [quantity, setQuantity] = useState('1')
   const [reason, setReason] = useState('')
+  const [savingMovement, setSavingMovement] = useState(false)
 
   const resetProduct = () => {
     setEditingId('')
@@ -299,6 +313,7 @@ function StockView({ stock, onSaved, setError }: { stock: StockBalance[]; onSave
     setCategory('Bebida')
     setUnit('un')
     setMinimum('5')
+    setPrice('0.00')
     setPhotoUrl('')
     setPhotoFile(null)
     setPhotoPreview('')
@@ -310,6 +325,7 @@ function StockView({ stock, onSaved, setError }: { stock: StockBalance[]; onSave
     setCategory(product.category || '')
     setUnit(product.unit)
     setMinimum(String(product.minimum_stock))
+    setPrice(String(product.sale_price ?? 0))
     setPhotoUrl(product.photo_url || '')
     setPhotoFile(null)
     setPhotoPreview(product.photo_url || '')
@@ -337,19 +353,22 @@ function StockView({ stock, onSaved, setError }: { stock: StockBalance[]; onSave
 
   const saveProduct = async (event: FormEvent) => {
     event.preventDefault()
+    const numericPrice = Number(price)
+    if (!Number.isFinite(numericPrice) || numericPrice < 0) return setError('Informe um preço de venda válido.')
+    if (name.trim().length < 2) return setError('Informe o nome do produto.')
     setSavingProduct(true)
     setError('')
     try {
       const supabase = getSupabaseBrowserClient()
       const uploadedPhotoUrl = await uploadPhoto()
-      const payload = { name: name.trim(), category: category.trim() || null, unit: unit.trim(), minimum_stock: Number(minimum), photo_url: uploadedPhotoUrl }
+      const payload = { name: name.trim(), category: category.trim() || null, unit: unit.trim(), minimum_stock: Number(minimum), sale_price: numericPrice, photo_url: uploadedPhotoUrl }
       const query = editingId ? supabase.from('stock_products').update(payload).eq('id', editingId) : supabase.from('stock_products').insert(payload)
       const { error: productError } = await query
       if (productError) throw productError
       resetProduct()
       await onSaved()
     } catch (caught) {
-      setError(getErrorMessage(caught, 'Não foi possível salvar o produto. Verifique se a migração 003 foi aplicada.'))
+      setError(getErrorMessage(caught, 'Não foi possível salvar o produto. Verifique se a migração 006 foi aplicada.'))
     } finally {
       setSavingProduct(false)
     }
@@ -360,7 +379,7 @@ function StockView({ stock, onSaved, setError }: { stock: StockBalance[]; onSave
     if (!confirmed) return
     const supabase = getSupabaseBrowserClient()
     const { error: removeError } = await supabase.from('stock_products').delete().eq('id', product.id)
-    if (removeError) return setError(removeError.message)
+    if (removeError) return setError(removeError.code === '23503' ? 'Este produto possui vendas registradas. Inative o produto em vez de excluí-lo.' : removeError.message)
     if (editingId === product.id) resetProduct()
     if (productId === product.id) setProductId('')
     await onSaved()
@@ -373,8 +392,26 @@ function StockView({ stock, onSaved, setError }: { stock: StockBalance[]; onSave
     await onSaved()
   }
 
-  const moveStock = async (event: FormEvent) => { event.preventDefault(); const supabase = getSupabaseBrowserClient(); const { error } = await supabase.from('stock_movements').insert({ product_id: productId, movement_type: movementType, quantity: Number(quantity), reason: reason || null }); if (error) return setError(error.message); setQuantity('1'); setReason(''); await onSaved() }
-  return <div className="admin-stack"><div className="admin-two-columns"><form className="admin-panel admin-form" onSubmit={saveProduct}><div className="panel-heading"><div><span className="eyebrow">{editingId ? 'EDITAR PRODUTO' : 'PRODUTO'}</span><h2>{editingId ? 'Atualizar item' : 'Cadastrar item'}</h2></div>{editingId && <button type="button" className="text-button" onClick={resetProduct}>Cancelar edição</button>}</div><div className="stock-photo-field"><div className="stock-photo-preview">{photoPreview ? <img src={photoPreview} alt="Prévia do produto" /> : <span>▣</span>}</div><div><label className="stock-photo-button">Adicionar foto<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => selectPhoto(event.target.files?.[0])} /></label><small>JPG, PNG, WebP ou GIF. Máximo de 5 MB.</small>{(photoPreview || photoUrl) && <button type="button" className="remove-photo-button" onClick={() => { setPhotoUrl(''); setPhotoFile(null); setPhotoPreview('') }}>Remover foto</button>}</div></div><label>Nome<input value={name} onChange={(event) => setName(event.target.value)} required /></label><div className="form-grid"><label>Categoria<input value={category} onChange={(event) => setCategory(event.target.value)} /></label><label>Unidade<input value={unit} onChange={(event) => setUnit(event.target.value)} required /></label><label>Estoque mínimo<input type="number" min="0" value={minimum} onChange={(event) => setMinimum(event.target.value)} required /></label></div><button className="button button-gold" type="submit" disabled={savingProduct}>{savingProduct ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Cadastrar produto'}</button></form><form className="admin-panel admin-form" onSubmit={moveStock}><div className="panel-heading"><div><span className="eyebrow">MOVIMENTAÇÃO</span><h2>Entrada ou saída</h2></div></div><label>Produto<select value={productId} onChange={(event) => setProductId(event.target.value)} required><option value="">Selecione</option>{stock.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><div className="form-grid"><label>Tipo<select value={movementType} onChange={(event) => setMovementType(event.target.value as 'entry' | 'exit')}><option value="entry">Entrada</option><option value="exit">Saída</option></select></label><label>Quantidade<input type="number" min="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} required /></label></div><label>Motivo<input value={reason} onChange={(event) => setReason(event.target.value)} /></label><button className="button button-gold" type="submit">Registrar movimentação</button></form></div><div className="stock-grid">{stock.map((item) => <article key={item.id} className={`${item.current_stock <= item.minimum_stock ? 'stock-card low' : 'stock-card'}${item.active ? '' : ' inactive'}`}><div className="stock-card-photo">{item.photo_url ? <img src={item.photo_url} alt={item.name} /> : <span>{item.name.charAt(0)}</span>}</div><span>{item.category || 'Produto'}</span><h3>{item.name}</h3><strong>{item.current_stock} <small>{item.unit}</small></strong><p>Mínimo: {item.minimum_stock}</p><div className="stock-card-actions"><button type="button" className="edit-button" onClick={() => editProduct(item)}>Editar</button><button type="button" className={item.active ? 'toggle active' : 'toggle'} onClick={() => void toggleProduct(item)}>{item.active ? 'Ativo' : 'Inativo'}</button><button type="button" className="delete-button" onClick={() => void removeProduct(item)}>Excluir</button></div></article>)}</div></div>
+  const moveStock = async (event: FormEvent) => {
+    event.preventDefault()
+    const numericQuantity = Number(quantity)
+    if (!Number.isInteger(numericQuantity) || numericQuantity <= 0) return setError('Informe uma quantidade inteira maior que zero.')
+    setSavingMovement(true)
+    setError('')
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const { error } = await supabase.from('stock_movements').insert({ product_id: productId, movement_type: movementType, quantity: numericQuantity, reason: reason.trim() || null })
+      if (error) throw error
+      setQuantity('1')
+      setReason('')
+      await onSaved()
+    } catch (caught) {
+      setError(getErrorMessage(caught, 'Não foi possível registrar a movimentação.'))
+    } finally {
+      setSavingMovement(false)
+    }
+  }
+  return <div className="admin-stack"><div className="admin-two-columns"><form className="admin-panel admin-form" onSubmit={saveProduct}><div className="panel-heading"><div><span className="eyebrow">{editingId ? 'EDITAR PRODUTO' : 'PRODUTO'}</span><h2>{editingId ? 'Atualizar item' : 'Cadastrar item'}</h2></div>{editingId && <button type="button" className="text-button" onClick={resetProduct}>Cancelar edição</button>}</div><div className="stock-photo-field"><div className="stock-photo-preview">{photoPreview ? <img src={photoPreview} alt="Prévia do produto" /> : <span>▣</span>}</div><div><label className="stock-photo-button">Adicionar foto<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => selectPhoto(event.target.files?.[0])} /></label><small>JPG, PNG, WebP ou GIF. Máximo de 5 MB.</small>{(photoPreview || photoUrl) && <button type="button" className="remove-photo-button" onClick={() => { setPhotoUrl(''); setPhotoFile(null); setPhotoPreview('') }}>Remover foto</button>}</div></div><label>Nome<input value={name} onChange={(event) => setName(event.target.value)} required /></label><div className="form-grid"><label>Categoria<input value={category} onChange={(event) => setCategory(event.target.value)} /></label><label>Unidade<input value={unit} onChange={(event) => setUnit(event.target.value)} required /></label><label>Estoque mínimo<input type="number" min="0" value={minimum} onChange={(event) => setMinimum(event.target.value)} required /></label><label>Preço de venda (R$)<input type="number" min="0" step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="0,00" required /></label></div><button className="button button-gold" type="submit" disabled={savingProduct}>{savingProduct ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Cadastrar produto'}</button></form><form className="admin-panel admin-form" onSubmit={moveStock}><div className="panel-heading"><div><span className="eyebrow">MOVIMENTAÇÃO</span><h2>Entrada ou saída</h2></div></div><label>Produto<select value={productId} onChange={(event) => setProductId(event.target.value)} required><option value="">Selecione</option>{stock.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><div className="form-grid"><label>Tipo<select value={movementType} onChange={(event) => setMovementType(event.target.value as 'entry' | 'exit')}><option value="entry">Entrada</option><option value="exit">Saída</option></select></label><label>Quantidade<input type="number" min="1" step="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} required /></label></div><label>Motivo<input value={reason} onChange={(event) => setReason(event.target.value)} /></label><button className="button button-gold" type="submit" disabled={savingMovement}>{savingMovement ? 'Registrando...' : 'Registrar movimentação'}</button></form></div><div className="stock-grid">{stock.map((item) => <article key={item.id} className={`${item.current_stock <= item.minimum_stock ? 'stock-card low' : 'stock-card'}${item.active ? '' : ' inactive'}`}><div className="stock-card-photo">{item.photo_url ? <img src={item.photo_url} alt={item.name} /> : <span>{item.name.charAt(0)}</span>}</div><span>{item.category || 'Produto'}</span><h3>{item.name}</h3><strong>{item.current_stock} <small>{item.unit}</small></strong><p>Mínimo: {item.minimum_stock}</p><p className="stock-sale-price">Venda: <strong>{currencyFormatter.format(Number(item.sale_price || 0))}</strong></p><div className="stock-card-actions"><button type="button" className="edit-button" onClick={() => editProduct(item)}>Editar</button><button type="button" className={item.active ? 'toggle active' : 'toggle'} onClick={() => void toggleProduct(item)}>{item.active ? 'Ativo' : 'Inativo'}</button><button type="button" className="delete-button" onClick={() => void removeProduct(item)}>Excluir</button></div></article>)}</div></div>
 }
 
 function SettingsView({ settings, setSettings, onSaved, setError }: { settings: SiteSettings; setSettings: (value: SiteSettings) => void; onSaved: () => void; setError: (value: string) => void }) {

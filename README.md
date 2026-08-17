@@ -26,13 +26,14 @@ O banco impede dois agendamentos sobrepostos para o mesmo barbeiro (restrição 
 
 - Dashboard com agendamentos do dia, alertas de estoque, entradas, saídas, saldo e faturamento mensal por barbeiro.
 - Agenda diária com mudança de status.
-- **Financeiro**: lançamento e exclusão de entradas e saídas, separação do faturamento por barbeiro, filtro por profissional e navegação entre meses passados ou futuros.
-- **Assinantes**: cadastro com nome, telefone e plano previamente cadastrado, acompanhamento de meses passados ou futuros, baixa de pagamento, reabertura, edição, ativação/inativação e exclusão.
+- **Financeiro**: lançamento e exclusão de entradas e saídas, separação do faturamento por barbeiro, filtro por profissional e navegação entre meses passados ou futuros. Vendas de produtos e baixas de mensalidades entram no caixa automaticamente.
+- **Assinantes**: cadastro com nome, telefone, plano e barbeiro responsável, acompanhamento de meses passados ou futuros, baixa de pagamento, reabertura, edição, ativação/inativação e exclusão. A baixa registra o preço do plano no caixa e no faturamento do barbeiro; reabrir desfaz os dois registros.
 - Barbeiros: cadastrar, editar, foto, especialidades, ativar/inativar.
 - Serviços: cadastrar, editar, preço, duração, ativar/inativar.
 - Bloqueios de agenda por barbeiro.
 - **Horários**: configurar dias, abertura, fechamento e intervalo dos slots pelo próprio painel.
-- Estoque: produtos com foto, cadastro, edição, exclusão, ativação/inativação e entrada/saída com validação de saldo.
+- Estoque: produtos com foto e preço de venda, cadastro, edição, exclusão, ativação/inativação e entrada/saída com validação de saldo.
+- **Venda rápida**: modal disponível no topo do painel. Seleciona produto, quantidade, data e barbeiro; uma única operação registra a venda, baixa o estoque e lança a entrada no caixa. Excluir a venda restaura o estoque e remove a entrada.
 - **Administradores**: criar novos acessos direto pelo painel (rota de servidor com a Secret key).
 - **Planos**: cadastrar e editar os planos mensais exibidos no site.
 - Configurações: nome, frase, WhatsApp, Instagram, endereço e URL da logo (a logo oficial já vem em `public/logo.png` (fundo transparente) como padrão).
@@ -51,6 +52,7 @@ O banco impede dois agendamentos sobrepostos para o mesmo barbeiro (restrição 
 4. Execute `supabase/migrations/003_area_cliente_e_fotos_estoque.sql` — cria o login do cliente, histórico/cancelamento seguro, foto dos produtos e o bucket de imagens.
 5. Execute `supabase/migrations/004_financeiro_e_assinantes.sql` — cria o fluxo de caixa, faturamento por barbeiro, assinantes e baixas mensais.
 6. Execute `supabase/migrations/005_planos_dos_assinantes.sql` — vincula cada assinante a um dos planos mensais previamente cadastrados.
+7. Execute `supabase/migrations/006_vendas_e_baixas_automaticas.sql` — adiciona preço aos produtos, vendas integradas ao estoque/caixa e baixa de mensalidades vinculada ao barbeiro.
 
 Em um banco já publicado, execute apenas as migrações ainda não aplicadas, na ordem numérica.
 
