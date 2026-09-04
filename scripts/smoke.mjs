@@ -12,6 +12,8 @@ const required = [
   'components/admin-dashboard.tsx',
   'components/admin-finance.tsx',
   'components/sales-modal.tsx',
+  'lib/uuid.mjs',
+  'lib/uuid.d.mts',
   'app/api/admin/users/route.ts',
   'app/api/admin/bootstrap/route.ts',
   'supabase/migrations/001_init.sql',
@@ -71,5 +73,14 @@ assert.match(salesSql, /Estoque insuficiente/i)
 const login = await readFile(join(root, 'app/admin/login/page.tsx'), 'utf8')
 assert.match(login, /signInWithPassword/)
 assert.doesNotMatch(login, /senha padrão/i)
+
+const publicSite = await readFile(join(root, 'components/public-site.tsx'), 'utf8')
+const bookingFlow = await readFile(join(root, 'components/booking-flow.tsx'), 'utf8')
+const clientPortal = await readFile(join(root, 'components/client-portal.tsx'), 'utf8')
+assert.match(publicSite, /configured \? \[\] : demoServices/)
+assert.match(publicSite, /configured \? \[\] : demoBarbers/)
+assert.match(bookingFlow, /isUuid\(serviceId\)/)
+assert.match(bookingFlow, /isUuid\(selectedSlot\.barber_id\)/)
+assert.match(clientPortal, /configurationError && <div className="client-alert client-alert-error"/)
 
 console.log('Smoke test: estrutura, segurança e arquivos críticos validados.')
