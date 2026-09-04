@@ -46,9 +46,9 @@ export function PublicSite() {
   const configStatus = getSupabaseConfigStatus()
   const configured = configStatus === 'ok'
   const [settings, setSettings] = useState<SiteSettings>(demoSettings)
-  const [services, setServices] = useState<Service[]>(demoServices)
-  const [barbers, setBarbers] = useState<Barber[]>(demoBarbers)
-  const [plans, setPlans] = useState<Plan[]>(demoPlans)
+  const [services, setServices] = useState<Service[]>(() => configured ? [] : demoServices)
+  const [barbers, setBarbers] = useState<Barber[]>(() => configured ? [] : demoBarbers)
+  const [plans, setPlans] = useState<Plan[]>(() => configured ? [] : demoPlans)
   const [loading, setLoading] = useState(configured)
   const [loadError, setLoadError] = useState('')
 
@@ -57,21 +57,27 @@ export function PublicSite() {
 
     const load = async () => {
       try {
+        setLoadError('')
         const supabase = getSupabaseBrowserClient()
         const [settingsResult, servicesResult, barbersResult, plansResult] = await Promise.all([
-          supabase.from('site_settings').select('*').eq('id', 1).single(),
+          supabase.from('site_settings').select('*').eq('id', 1).maybeSingle(),
           supabase.from('services').select('*').eq('active', true).order('price'),
           supabase.from('barbers').select('*').eq('active', true).order('name'),
           supabase.from('plans').select('*').eq('active', true).order('sort_order'),
         ])
 
         if (settingsResult.data) setSettings(settingsResult.data as SiteSettings)
-        if (servicesResult.error) throw servicesResult.error
-        if (barbersResult.error) throw barbersResult.error
-        setServices((servicesResult.data ?? []) as Service[])
-        setBarbers((barbersResult.data ?? []) as Barber[])
+        setServices(servicesResult.error ? [] : ((servicesResult.data ?? []) as Service[]))
+        setBarbers(barbersResult.error ? [] : ((barbersResult.data ?? []) as Barber[]))
         setPlans(plansResult.error ? [] : ((plansResult.data ?? []) as Plan[]))
+
+        const firstError = settingsResult.error || servicesResult.error || barbersResult.error || plansResult.error
+        if (firstError) throw firstError
       } catch (caught) {
+        // Em produção, nunca mantenha IDs fictícios: as funções SQL esperam UUIDs reais.
+        setServices((current) => current.filter((item) => !item.id.startsWith('demo-')))
+        setBarbers((current) => current.filter((item) => !item.id.startsWith('demo-')))
+        setPlans((current) => current.filter((item) => !item.id.startsWith('demo-')))
         setLoadError(getErrorMessage(caught, 'Não foi possível carregar os dados da barbearia.'))
       } finally {
         setLoading(false)

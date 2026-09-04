@@ -1,10 +1,11 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { groupAvailableSlots } from '@/lib/booking-utils.mjs'
 import { getErrorMessage } from '@/lib/error-message'
 import { bahiaTimeFormatter, currencyFormatter, toLocalDateInput } from '@/lib/format'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { isUuid } from '@/lib/uuid.mjs'
 import type { AvailableSlot, Barber, Service } from '@/lib/types'
 
 interface BookingFlowProps {
@@ -31,6 +32,7 @@ export function BookingFlow({ services, barbers, configured, businessName, clien
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [successId, setSuccessId] = useState('')
+  const slotRequestId = useRef(0)
 
   const service = services.find((item) => item.id === serviceId)
   const selectedBarber = barbers.find((item) => item.id === selectedSlot?.barber_id)
@@ -40,6 +42,7 @@ export function BookingFlow({ services, barbers, configured, businessName, clien
   )
 
   const loadSlots = async (targetDate = date) => {
+    const requestId = ++slotRequestId.current
     setLoadingSlots(true)
     setError('')
     setSelectedSlot(null)
@@ -57,6 +60,13 @@ export function BookingFlow({ services, barbers, configured, businessName, clien
         return
       }
 
+      if (!isUuid(serviceId) || !services.some((item) => item.id === serviceId && item.active)) {
+        throw new Error('O serviço selecionado não está disponível. Atualize a página e escolha novamente.')
+      }
+      if (barberId && (!isUuid(barberId) || !barbers.some((item) => item.id === barberId && item.active))) {
+        throw new Error('O barbeiro selecionado não está disponível. Atualize a página e escolha novamente.')
+      }
+
       const supabase = getSupabaseBrowserClient()
       const { data, error: rpcError } = await supabase.rpc('get_available_slots', {
         p_date: targetDate,
@@ -64,12 +74,14 @@ export function BookingFlow({ services, barbers, configured, businessName, clien
         p_barber_id: barberId || null,
       })
       if (rpcError) throw rpcError
-      setSlots((data ?? []) as AvailableSlot[])
+      if (requestId === slotRequestId.current) setSlots((data ?? []) as AvailableSlot[])
     } catch (caught) {
-      setSlots([])
-      setError(getErrorMessage(caught, 'Não foi possível consultar os horários.'))
+      if (requestId === slotRequestId.current) {
+        setSlots([])
+        setError(getErrorMessage(caught, 'Não foi possível consultar os horários.'))
+      }
     } finally {
-      setLoadingSlots(false)
+      if (requestId === slotRequestId.current) setLoadingSlots(false)
     }
   }
 
@@ -81,6 +93,17 @@ export function BookingFlow({ services, barbers, configured, businessName, clien
 
     if (!configured) {
       setSuccessId('DEMONSTRACAO')
+      return
+    }
+
+    if (!isUuid(serviceId) || !services.some((item) => item.id === serviceId && item.active)) {
+      setError('O serviço selecionado não está disponível. Atualize a página e escolha novamente.')
+      setStep(1)
+      return
+    }
+    if (!isUuid(selectedSlot.barber_id) || !barbers.some((item) => item.id === selectedSlot.barber_id && item.active)) {
+      setError('O barbeiro selecionado não está disponível. Atualize a página e escolha novamente.')
+      setStep(2)
       return
     }
 
@@ -97,8 +120,9 @@ export function BookingFlow({ services, barbers, configured, businessName, clien
       setSuccessId(String(data))
       await onBooked?.()
     } catch (caught) {
-      setError(getErrorMessage(caught, 'Não foi possível concluir o agendamento.'))
+      const message = getErrorMessage(caught, 'Não foi possível concluir o agendamento.')
       await loadSlots()
+      setError(message)
       setStep(3)
     } finally {
       setSubmitting(false)
@@ -106,6 +130,7 @@ export function BookingFlow({ services, barbers, configured, businessName, clien
   }
 
   const reset = () => {
+    slotRequestId.current += 1
     setStep(1)
     setServiceId('')
     setBarberId('')
@@ -144,7 +169,7 @@ export function BookingFlow({ services, barbers, configured, businessName, clien
           <div className="form-title"><span>01</span><div><h3>Escolha o serviço</h3><p>Selecione o cuidado ideal para hoje.</p></div></div>
           <div className="choice-list">
             {services.map((item) => (
-              <button key={item.id} type="button" className={serviceId === item.id ? 'choice-card selected' : 'choice-card'} onClick={() => setServiceId(item.id)}>
+              <button key={item.id} type="button" className={serviceId === item.id ? 'choice-card selected' : 'choice-card'} onClick={() => { slotRequestId.current += 1; setServiceId(item.id); setBarberId(''); setSelectedSlot(null); setSlots([]); setError('') }}>
                 <div><strong>{item.name}</strong><small>{item.duration_minutes} minutos</small></div>
                 <b>{currencyFormatter.format(Number(item.price))}</b>
               </button>
@@ -159,9 +184,9 @@ export function BookingFlow({ services, barbers, configured, businessName, clien
         <div className="form-step">
           <div className="form-title"><span>02</span><div><h3>Escolha o profissional</h3><p>Você também pode deixar a escolha por nossa conta.</p></div></div>
           <div className="choice-list">
-            <button type="button" className={!barberId ? 'choice-card selected' : 'choice-card'} onClick={() => setBarberId('')}><div><strong>Primeiro disponível</strong><small>Encontra a melhor opção automaticamente</small></div><b>⚡</b></button>
+            <button type="button" className={!barberId ? 'choice-card selected' : 'choice-card'} onClick={() => { slotRequestId.current += 1; setBarberId(''); setSelectedSlot(null); setSlots([]); setError('') }}><div><strong>Primeiro disponível</strong><small>Encontra a melhor opção automaticamente</small></div><b>⚡</b></button>
             {barbers.map((barber) => (
-              <button key={barber.id} type="button" className={barberId === barber.id ? 'choice-card selected choice-professional' : 'choice-card choice-professional'} onClick={() => setBarberId(barber.id)}>
+              <button key={barber.id} type="button" className={barberId === barber.id ? 'choice-card selected choice-professional' : 'choice-card choice-professional'} onClick={() => { slotRequestId.current += 1; setBarberId(barber.id); setSelectedSlot(null); setSlots([]); setError('') }}>
                 <span className="choice-avatar">{barber.photo_url ? <img src={barber.photo_url} alt="" /> : barber.name.charAt(0)}</span>
                 <div><strong>{barber.name}</strong><small>{barber.specialties.join(' • ') || 'Profissional da equipe'}</small></div><b>›</b>
               </button>

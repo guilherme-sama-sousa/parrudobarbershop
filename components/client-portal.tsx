@@ -364,6 +364,7 @@ export function ClientPortal({ settings, services, barbers, plans, configured, c
           <button type="button" className="client-avatar" onClick={() => setTab('profile')} aria-label="Abrir perfil">{activeClient.full_name.charAt(0).toUpperCase()}</button>
         </header>
 
+        {configurationError && <div className="client-alert client-alert-error" role="alert"><span>{configurationError}</span></div>}
         {error && <div className="client-alert client-alert-error" role="alert"><span>{error}</span><button type="button" onClick={() => setError('')}>✕</button></div>}
         {notice && <div className="client-alert client-alert-success" role="status"><span>{notice}</span><button type="button" onClick={() => setNotice('')}>✕</button></div>}
 
