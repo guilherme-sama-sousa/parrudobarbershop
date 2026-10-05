@@ -101,6 +101,17 @@ npm run lint    # ESLint
 npm run build   # build de produção
 ```
 
+O workflow `.github/workflows/ci.yml` executa essas validações em pull requests
+para `main` e em pushes na `main`, com Node.js 24 e instalação reproduzível via
+`npm ci`. Cada validação gera um check independente: `CI / test`, `CI / lint` e
+`CI / build`. O build de CI não precisa de credenciais de produção.
+
+Para bloquear merges com regressões, configure a proteção de `main` em
+**Settings > Branches**: exija pull request, os três checks acima e a branch
+atualizada antes do merge. Mantenha force pushes e exclusão da branch bloqueados.
+O workflow sozinho executa as validações; a proteção da branch torna os checks
+obrigatórios. O lint segue o comando atual e falha em erros; avisos não bloqueiam.
+
 ## Segurança
 
 - O navegador usa apenas a chave publicável; a Secret key fica restrita à rota de servidor.
